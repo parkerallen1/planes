@@ -5,8 +5,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/plane.dart';
 
 final geminiServiceProvider = Provider<GeminiService>((ref) {
-  // TODO: Replace with actual API key or configuration
-  return GeminiService(apiKey: 'AIzaSyCWLLl8Yga1ljdB47sLbI7rHYzagD7rbHo');
+  // Load API key from environment or use empty string as fallback
+  const apiKey = String.fromEnvironment('GEMINI_API_KEY', defaultValue: '');
+  if (apiKey.isEmpty) {
+    throw 'GEMINI_API_KEY environment variable not set. Please set it in your .env or build configuration.';
+  }
+  return GeminiService(apiKey: apiKey);
 });
 
 class GeminiService {
