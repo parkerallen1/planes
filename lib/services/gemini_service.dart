@@ -108,6 +108,15 @@ Return the response in JSON format:
       tags.insert(0, data['manufacturer']);
     }
 
+    // Handle identificationTips as either String or List<String>
+    String tips = '';
+    final rawTips = data['identificationTips'];
+    if (rawTips is String) {
+      tips = rawTips;
+    } else if (rawTips is List) {
+      tips = rawTips.map((t) => '• $t').join('\n');
+    }
+
     return Plane(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       imagePath: imagePath,
@@ -120,7 +129,7 @@ Return the response in JSON format:
       tags: tags,
       status: PlaneStatus.identifying,
       guesses: guesses,
-      identificationTips: data['identificationTips'] ?? '',
+      identificationTips: tips,
     );
   }
 
