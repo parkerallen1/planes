@@ -2,13 +2,14 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../models/plane.dart';
 
 final geminiServiceProvider = Provider<GeminiService>((ref) {
-  // Load API key from environment or use empty string as fallback
-  const apiKey = String.fromEnvironment('GEMINI_API_KEY', defaultValue: '');
+  // Load API key from .env.local file
+  final apiKey = dotenv.env['GEMINI_API_KEY'] ?? '';
   if (apiKey.isEmpty) {
-    throw 'GEMINI_API_KEY environment variable not set. Please set it in your .env or build configuration.';
+    throw 'GEMINI_API_KEY not found in .env.local file.';
   }
   return GeminiService(apiKey: apiKey);
 });
