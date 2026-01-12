@@ -39,6 +39,9 @@ jobs:
         run: |
           echo "GOOGLE_API_KEY=${{ secrets.GOOGLE_API_KEY }}" > .env.local
 
+      - name: Generate App Icons
+        run: dart run flutter_launcher_icons
+
       - name: Build App Bundle
         run: flutter build appbundle
 
