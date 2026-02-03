@@ -22,6 +22,22 @@ class GeminiService {
     _model = GenerativeModel(model: 'gemini-3-pro-preview', apiKey: apiKey);
   }
 
+  static const List<String> validTags = [
+    'Fighter',
+    'Bomber',
+    'Transport/Cargo',
+    'Attack Helicopter',
+    'Utility Helicopter',
+    'Surveillance/AWACS',
+    'Tanker',
+    'Trainer',
+    'Drone/UAV',
+    'Stealth',
+    'Experimental',
+    'Vintage Warbird',
+    'Commercial/Civilian',
+  ];
+
   Future<Plane> identifyPlane(
     String imagePath,
     double? lat,
@@ -44,7 +60,7 @@ Please provide:
 2. Identification tips: What specific visual features should I look for to confirm which plane it is? (e.g. wing shape, engine placement, tail fin). Provide this as a bulleted list.
 3. A general description and activity guess.
 4. The manufacturer of the plane (e.g. Boeing, Airbus, Cessna).
-5. 3-5 classification tags.
+5. 3-5 classification tags. IMPORTANT: You must ONLY select tags from this exact list: ${validTags.join(', ')}. Do not use any other tags.
 
 Return the response in JSON format:
 {
@@ -131,6 +147,52 @@ Return the response in JSON format:
       guesses: guesses,
       identificationTips: tips,
     );
+  }
+
+  Future<List<String>> regenerateTags(String imagePath) async {
+    final image = await File(imagePath).readAsBytes();
+    final prompt = TextPart('''
+Identify this plane and provide classification tags.
+Please select 3-5 tags from this EXACT list: ${validTags.join(', ')}.
+
+Also distinguish the MANUFACTURER of the plane (e.g. Boeing, Airbus, Cessna, Piper).
+
+Return the response in JSON format:
+{
+  "tags": ["tag1", "tag2"],
+  "manufacturer": "Manufacturer Name"
+}
+''');
+
+    final content = [
+      Content.multi([prompt, DataPart('image/jpeg', image)]),
+    ];
+
+    final response = await _model.generateContent(content);
+    final text = response.text;
+
+    String jsonString = text ?? '{}';
+    if (jsonString.contains('```json')) {
+      jsonString = jsonString.split('```json')[1].split('```')[0];
+    } else if (jsonString.contains('```')) {
+      jsonString = jsonString.split('```')[1].split('```')[0];
+    }
+
+    Map<String, dynamic> data = {};
+    try {
+      data = jsonDecode(jsonString);
+    } catch (e) {
+      print('Error parsing JSON: $e');
+      return [];
+    }
+
+    final tags = List<String>.from(data['tags'] ?? []);
+    if (data['manufacturer'] != null &&
+        data['manufacturer'].toString().isNotEmpty) {
+      tags.insert(0, data['manufacturer']);
+    }
+
+    return tags;
   }
 
   Future<String> chat(

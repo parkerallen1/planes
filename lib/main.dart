@@ -4,6 +4,10 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'services/storage_service.dart';
 import 'screens/home_screen.dart';
 import 'screens/add_plane_screen.dart';
+import 'screens/settings_screen.dart';
+import 'screens/boot_screen.dart';
+import 'providers/theme_provider.dart';
+import 'theme/app_themes.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -22,40 +26,29 @@ void main() async {
   );
 }
 
-class PlaneTrackerApp extends StatelessWidget {
+class PlaneTrackerApp extends ConsumerWidget {
   const PlaneTrackerApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final settings = ref.watch(themeProvider);
+
+    // Select theme based on current mode and font
+    final theme = settings.isPokedex
+        ? AppThemes.pokedexTheme(font: settings.font)
+        : AppThemes.classicTheme;
+
     return MaterialApp(
       title: 'Plane Tracker',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.blueAccent,
-          brightness: Brightness.dark,
-        ),
-        useMaterial3: true,
-        brightness: Brightness.dark,
-        scaffoldBackgroundColor: const Color(
-          0xFF121212,
-        ), // Material dark background
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Color(0xFF1E1E1E),
-          elevation: 0,
-        ),
-        cardTheme: CardThemeData(
-          color: const Color(0xFF1E1E1E),
-          elevation: 4,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-        ),
-      ),
-      initialRoute: '/',
+      theme: theme,
+      // Show boot screen if Pokedex mode and boot animation enabled
+      home: settings.isPokedex && settings.bootAnimation
+          ? const BootScreen()
+          : const HomeScreen(),
       routes: {
-        '/': (context) => const HomeScreen(),
+        '/home': (context) => const HomeScreen(),
         '/add': (context) => const AddPlaneScreen(),
-        // Detail screen will be pushed with arguments
+        '/settings': (context) => const SettingsScreen(),
       },
     );
   }
