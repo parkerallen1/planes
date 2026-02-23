@@ -204,42 +204,51 @@ class _PlaneDetailScreenState extends ConsumerState<PlaneDetailScreen> {
   }
 
   Widget _buildImageSection(bool isPokedex, bool isIdentifying) {
-    return Stack(
-      children: [
-        Image.file(
-          File(_plane.imagePath),
-          width: double.infinity,
-          height: 250,
-          fit: BoxFit.cover,
-        ),
-        if (isPokedex) ...[
-          // Gradient overlay
-          Positioned.fill(
-            child: Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  stops: const [0.5, 1.0],
-                  colors: [
-                    Colors.transparent,
-                    AppThemes.pokedexBlack.withOpacity(0.9),
-                  ],
+    return AspectRatio(
+      aspectRatio: 1.0,
+      child: Stack(
+        children: [
+          Image.file(
+            File(_plane.imagePath),
+            width: double.infinity,
+            height: double.infinity,
+            fit: BoxFit.cover,
+            gaplessPlayback: true,
+          ),
+          if (isPokedex) ...[
+            // Gradient overlay
+            Positioned.fill(
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    stops: const [0.5, 1.0],
+                    colors: [
+                      Colors.transparent,
+                      AppThemes.pokedexBlack.withOpacity(0.9),
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
-          // Corner decorations
-          Positioned(top: 16, left: 16, child: _buildCornerDecoration()),
-          Positioned(
-            top: 16,
-            right: 16,
-            child: _buildStatusIndicator(isIdentifying),
-          ),
-          // Bottom info bar
-          Positioned(bottom: 0, left: 0, right: 0, child: _buildImageInfoBar()),
+            // Corner decorations
+            Positioned(top: 16, left: 16, child: _buildCornerDecoration()),
+            Positioned(
+              top: 16,
+              right: 16,
+              child: _buildStatusIndicator(isIdentifying),
+            ),
+            // Bottom info bar
+            Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
+              child: _buildImageInfoBar(),
+            ),
+          ],
         ],
-      ],
+      ),
     );
   }
 
@@ -1007,56 +1016,61 @@ class _PlaneDetailScreenState extends ConsumerState<PlaneDetailScreen> {
   }
 
   Widget _buildChatInput(bool isPokedex) {
-    return Container(
-      padding: const EdgeInsets.all(8.0),
-      decoration: isPokedex
-          ? BoxDecoration(
-              color: AppThemes.pokedexCard,
-              border: Border(
-                top: BorderSide(color: AppThemes.pokedexBlue.withOpacity(0.5)),
+    return SafeArea(
+      top: false,
+      child: Container(
+        padding: const EdgeInsets.all(8.0),
+        decoration: isPokedex
+            ? BoxDecoration(
+                color: AppThemes.pokedexCard,
+                border: Border(
+                  top: BorderSide(
+                    color: AppThemes.pokedexBlue.withOpacity(0.5),
+                  ),
+                ),
+              )
+            : null,
+        child: Row(
+          children: [
+            Expanded(
+              child: TextField(
+                controller: _chatController,
+                decoration: InputDecoration(
+                  hintText: isPokedex
+                      ? 'Query aircraft database...'
+                      : 'Ask about this plane...',
+                  border: const OutlineInputBorder(),
+                ),
+                enabled: !_isSending,
               ),
-            )
-          : null,
-      child: Row(
-        children: [
-          Expanded(
-            child: TextField(
-              controller: _chatController,
-              decoration: InputDecoration(
-                hintText: isPokedex
-                    ? 'Query aircraft database...'
-                    : 'Ask about this plane...',
-                border: const OutlineInputBorder(),
-              ),
-              enabled: !_isSending,
             ),
-          ),
-          const SizedBox(width: 8),
-          Container(
-            decoration: isPokedex
-                ? BoxDecoration(
-                    color: AppThemes.pokedexRed,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.white24, width: 2),
-                  )
-                : null,
-            child: IconButton(
-              icon: _isSending
-                  ? SizedBox(
-                      width: 24,
-                      height: 24,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation(
-                          isPokedex ? Colors.white : null,
-                        ),
-                      ),
+            const SizedBox(width: 8),
+            Container(
+              decoration: isPokedex
+                  ? BoxDecoration(
+                      color: AppThemes.pokedexRed,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.white24, width: 2),
                     )
-                  : Icon(Icons.send, color: isPokedex ? Colors.white : null),
-              onPressed: _isSending ? null : _sendMessage,
+                  : null,
+              child: IconButton(
+                icon: _isSending
+                    ? SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation(
+                            isPokedex ? Colors.white : null,
+                          ),
+                        ),
+                      )
+                    : Icon(Icons.send, color: isPokedex ? Colors.white : null),
+                onPressed: _isSending ? null : _sendMessage,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

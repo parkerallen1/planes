@@ -92,6 +92,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 ),
 
               // Tag Filter
+              if (isPokedex) const SizedBox(height: 4),
               if (allTags.isNotEmpty)
                 SizedBox(
                   height: 60,
@@ -305,6 +306,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                         File(plane.imagePath),
                         width: double.infinity,
                         fit: BoxFit.cover,
+                        gaplessPlayback: true,
                         errorBuilder: (context, error, stackTrace) =>
                             const Center(child: Icon(Icons.broken_image)),
                       ),
@@ -327,7 +329,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
                 // Info section
                 Container(
-                  padding: const EdgeInsets.all(8.0),
+                  padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
                   decoration: isPokedex
                       ? BoxDecoration(
                           color: AppThemes.pokedexCard,
@@ -555,18 +557,18 @@ class _PokedexHeader extends StatelessWidget {
 
                 const SizedBox(width: 16),
 
-                // Right side: Logo and settings (upper section)
+                // Right side: Logo and settings
                 Expanded(
                   child: Padding(
-                    padding: const EdgeInsets.only(top: 4),
+                    padding: const EdgeInsets.only(top: 8),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.end,
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         // Planedex Logo
                         Expanded(
                           child: Align(
-                            alignment: Alignment.topRight,
+                            alignment: Alignment.centerRight,
                             child: Image.asset(
                               'assets/images/planedex_logo.png',
                               height: 80,
@@ -648,13 +650,21 @@ class _PokedexHeader extends StatelessWidget {
           ],
         ),
         child: Center(
-          child: Text(
-            scannedCount.toString(),
-            style: const TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-              shadows: [Shadow(color: Colors.black54, blurRadius: 4)],
+          child: Padding(
+            padding: const EdgeInsets.all(4.0),
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                scannedCount.toString(),
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                  height: 1.0,
+                  shadows: [Shadow(color: Colors.black54, blurRadius: 4)],
+                ),
+              ),
             ),
           ),
         ),
@@ -664,23 +674,69 @@ class _PokedexHeader extends StatelessWidget {
 
   Widget _buildStatusLeds() {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildSmallLed(
-          color: AppThemes.pokedexRed,
-          isActive: identifyingCount > 0,
-          tooltip: 'Scanning',
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _buildSmallLed(
+              color: AppThemes.pokedexRed,
+              isActive: identifyingCount > 0,
+              tooltip: 'Scanning',
+            ),
+            const SizedBox(width: 8),
+            const Text(
+              'SCANNING',
+              style: TextStyle(
+                fontSize: 10,
+                color: Colors.white70,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 1,
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 6),
-        _buildSmallLed(
-          color: AppThemes.pokedexYellow,
-          isActive: true,
-          tooltip: 'Ready',
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _buildSmallLed(
+              color: AppThemes.pokedexYellow,
+              isActive: true,
+              tooltip: 'Ready',
+            ),
+            const SizedBox(width: 8),
+            const Text(
+              'READY',
+              style: TextStyle(
+                fontSize: 10,
+                color: Colors.white70,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 1,
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 6),
-        _buildSmallLed(
-          color: AppThemes.pokedexGreen,
-          isActive: confirmedCount > 0,
-          tooltip: 'Confirmed',
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _buildSmallLed(
+              color: AppThemes.pokedexGreen,
+              isActive: confirmedCount > 0,
+              tooltip: 'Confirmed',
+            ),
+            const SizedBox(width: 8),
+            const Text(
+              'CONFIRMED',
+              style: TextStyle(
+                fontSize: 10,
+                color: Colors.white70,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 1,
+              ),
+            ),
+          ],
         ),
       ],
     );
@@ -741,10 +797,10 @@ class _PokedexHeaderClipper extends CustomClipper<Path> {
     path.lineTo(size.width, 0);
 
     // Right edge - go down to the upper level (logo section)
-    path.lineTo(size.width, size.height - 40);
+    path.lineTo(size.width, size.height - 55);
 
     // Diagonal line going down-left
-    path.lineTo(size.width * 0.35, size.height - 40);
+    path.lineTo(size.width * 0.35, size.height - 55);
 
     // The angled transition
     path.lineTo(size.width * 0.25, size.height - 20);
@@ -777,8 +833,8 @@ class _PokedexHeaderBorderPainter extends CustomPainter {
     // Draw the bottom edge line
     path.moveTo(0, size.height - 20);
     path.lineTo(size.width * 0.25, size.height - 20);
-    path.lineTo(size.width * 0.35, size.height - 40);
-    path.lineTo(size.width, size.height - 40);
+    path.lineTo(size.width * 0.35, size.height - 55);
+    path.lineTo(size.width, size.height - 55);
 
     canvas.drawPath(path, paint);
 
@@ -791,8 +847,8 @@ class _PokedexHeaderBorderPainter extends CustomPainter {
     final glowPath = Path();
     glowPath.moveTo(0, size.height - 22);
     glowPath.lineTo(size.width * 0.24, size.height - 22);
-    glowPath.lineTo(size.width * 0.34, size.height - 42);
-    glowPath.lineTo(size.width, size.height - 42);
+    glowPath.lineTo(size.width * 0.34, size.height - 57);
+    glowPath.lineTo(size.width, size.height - 57);
 
     canvas.drawPath(glowPath, glowPaint);
   }
