@@ -73,13 +73,14 @@ class PlaneAdapter extends TypeAdapter<Plane> {
       guesses:
           fields[11] == null ? [] : (fields[11] as List).cast<PlaneGuess>(),
       identificationTips: fields[12] == null ? '' : fields[12] as String,
+      categoryId: fields[13] == null ? 'planes' : fields[13] as String,
     );
   }
 
   @override
   void write(BinaryWriter writer, Plane obj) {
     writer
-      ..writeByte(13)
+      ..writeByte(14)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -105,7 +106,9 @@ class PlaneAdapter extends TypeAdapter<Plane> {
       ..writeByte(11)
       ..write(obj.guesses)
       ..writeByte(12)
-      ..write(obj.identificationTips);
+      ..write(obj.identificationTips)
+      ..writeByte(13)
+      ..write(obj.categoryId);
   }
 
   @override

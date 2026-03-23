@@ -5,7 +5,9 @@ import '../services/storage_service.dart';
 import '../services/sound_service.dart';
 import '../models/plane.dart';
 import '../providers/theme_provider.dart';
+import '../providers/category_provider.dart';
 import '../theme/app_themes.dart';
+import '../widgets/category_scroll_wheel.dart';
 
 import 'plane_detail_screen.dart';
 
@@ -19,6 +21,7 @@ class HomeScreen extends ConsumerStatefulWidget {
 class _HomeScreenState extends ConsumerState<HomeScreen>
     with TickerProviderStateMixin {
   String? selectedTag;
+  String? _lastCategoryId;
   late AnimationController _ledController;
   late Animation<double> _ledAnimation;
 
@@ -47,9 +50,26 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     final storageService = ref.watch(storageServiceProvider);
     final settings = ref.watch(themeProvider);
     final isPokedex = settings.isPokedex;
+    final categoryState = ref.watch(categoryProvider);
+    final activeCategory = categoryState.activeCategory;
 
-    final allPlanes = storageService.getAllPlanes();
-    final allTags = storageService.getAllTags();
+    // Reset tag filter when category changes
+    if (_lastCategoryId != activeCategory.id) {
+      _lastCategoryId = activeCategory.id;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) setState(() => selectedTag = null);
+      });
+    }
+
+    final allStoredPlanes = storageService.getAllPlanes();
+    // Filter by active category
+    final allPlanes = allStoredPlanes
+        .where((p) => p.categoryId == activeCategory.id)
+        .toList();
+    final allTags = <String>{};
+    for (final p in allPlanes) {
+      allTags.addAll(p.tags);
+    }
 
     final filteredPlanes = selectedTag == null
         ? allPlanes
@@ -67,7 +87,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       appBar: isPokedex
           ? null
           : AppBar(
-              title: const Text('My Planes'),
+              title: Text(
+                '${activeCategory.emoji} My ${activeCategory.name}',
+              ),
               actions: [
                 IconButton(
                   icon: const Icon(Icons.settings),
@@ -154,9 +176,23 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 child: CustomPaint(painter: CrtScanlinesPainter()),
               ),
             ),
+
+          // Retro category scroll wheel — bottom-right corner
+          Positioned(
+            right: 0,
+            bottom: 0,
+            child: CategoryScrollWheel(
+              onAddPressed: () async {
+                if (isPokedex && settings.soundEffects) {
+                  ref.read(soundServiceProvider).play(PokedexSound.select);
+                }
+                await Navigator.pushNamed(context, '/add');
+                setState(() {});
+              },
+            ),
+          ),
         ],
       ),
-      floatingActionButton: _buildFAB(isPokedex),
     );
 
     // Wrap with screen frame if enabled
@@ -222,20 +258,27 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   }
 
   Widget _buildEmptyState(bool isPokedex) {
+    final categoryState = ref.read(categoryProvider);
+    final activeCategory = categoryState.activeCategory;
+
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            isPokedex ? Icons.radar : Icons.airplanemode_active,
-            size: 80,
-            color: isPokedex
-                ? AppThemes.pokedexBlue.withValues(alpha: 0.5)
-                : Colors.grey,
+          Text(
+            activeCategory.emoji,
+            style: TextStyle(
+              fontSize: 72,
+              color: isPokedex
+                  ? Colors.white.withValues(alpha: 0.3)
+                  : Colors.grey.withValues(alpha: 0.5),
+            ),
           ),
           const SizedBox(height: 16),
           Text(
-            isPokedex ? 'NO AIRCRAFT DETECTED' : 'No planes found. Add one!',
+            isPokedex
+                ? 'NO ${activeCategory.name.toUpperCase()} DETECTED'
+                : 'No ${activeCategory.name.toLowerCase()} found. Add one!',
             style: TextStyle(
               color: Colors.white54,
               fontSize: isPokedex ? 16 : 14,
@@ -246,7 +289,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
           if (isPokedex) ...[
             const SizedBox(height: 8),
             const Text(
-              'Tap + to begin scanning',
+              'Tap + on the cog wheel to begin scanning',
               style: TextStyle(
                 color: Colors.white38,
                 fontSize: 12,
@@ -452,22 +495,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     );
   }
 
-  Widget _buildFAB(bool isPokedex) {
-    return FloatingActionButton(
-      onPressed: () async {
-        if (isPokedex && ref.read(themeProvider).soundEffects) {
-          ref.read(soundServiceProvider).play(PokedexSound.select);
-        }
-        await Navigator.pushNamed(context, '/add');
-        setState(() {});
-      },
-      backgroundColor: isPokedex ? AppThemes.pokedexRed : null,
-      child: Icon(
-        isPokedex ? Icons.camera_alt : Icons.add,
-        color: Colors.white,
-      ),
-    );
-  }
 }
 
 /// Custom Pokedex header widget with curved diagonal design

@@ -69,6 +69,9 @@ class Plane extends HiveObject {
   @HiveField(12, defaultValue: '')
   String identificationTips;
 
+  @HiveField(13, defaultValue: 'planes')
+  String categoryId;
+
   Plane({
     required this.id,
     required this.imagePath,
@@ -84,6 +87,7 @@ class Plane extends HiveObject {
         .finalized, // Default to finalized for backward compatibility
     this.guesses = const [],
     this.identificationTips = '',
+    this.categoryId = 'planes',
   });
 }
 

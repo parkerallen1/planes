@@ -6,6 +6,7 @@ import '../services/gemini_service.dart';
 import '../services/location_service.dart';
 import '../services/storage_service.dart';
 import '../providers/theme_provider.dart';
+import '../providers/category_provider.dart';
 import '../theme/app_themes.dart';
 import 'plane_detail_screen.dart';
 
@@ -112,6 +113,7 @@ class _AddPlaneScreenState extends ConsumerState<AddPlaneScreen>
     if (_image == null) return;
 
     final isPokedex = ref.read(themeProvider).isPokedex;
+    final category = ref.read(categoryProvider).activeCategory;
 
     setState(() {
       _isAnalyzing = true;
@@ -148,6 +150,7 @@ class _AddPlaneScreenState extends ConsumerState<AddPlaneScreen>
         lat,
         long,
         manualLocation,
+        category: category,
       );
 
       setState(() {
@@ -180,10 +183,15 @@ class _AddPlaneScreenState extends ConsumerState<AddPlaneScreen>
   @override
   Widget build(BuildContext context) {
     final isPokedex = ref.watch(themeProvider).isPokedex;
+    final category = ref.watch(categoryProvider).activeCategory;
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(isPokedex ? 'SCAN AIRCRAFT' : 'Add Plane'),
+        title: Text(
+          isPokedex
+              ? 'SCAN ${category.name.toUpperCase()}'
+              : 'Add ${category.name}',
+        ),
         leading: isPokedex ? _buildPokedexBackButton(context) : null,
       ),
       body: Center(
@@ -442,7 +450,9 @@ class _AddPlaneScreenState extends ConsumerState<AddPlaneScreen>
         ),
         const SizedBox(height: 24),
         Text(
-          isPokedex ? 'READY TO SCAN' : 'Capture an Aircraft',
+          isPokedex
+              ? 'READY TO SCAN'
+              : 'Capture a ${category.name.substring(0, category.name.length - 1)}',
           style: TextStyle(
             fontSize: isPokedex ? 18 : 16,
             color: isPokedex ? AppThemes.pokedexLightBlue : Colors.white70,
@@ -482,7 +492,9 @@ class _AddPlaneScreenState extends ConsumerState<AddPlaneScreen>
       ),
       icon: Icon(isPokedex ? Icons.radar : Icons.auto_awesome),
       label: Text(
-        isPokedex ? 'BEGIN SCAN' : 'Identify Plane',
+        isPokedex
+            ? 'BEGIN SCAN'
+            : 'Identify ${category.name.substring(0, category.name.length - 1)}',
         style: TextStyle(
           letterSpacing: isPokedex ? 2 : 0,
           fontWeight: FontWeight.bold,
