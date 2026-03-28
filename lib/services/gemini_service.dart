@@ -178,13 +178,13 @@ Return the response in JSON format:
     ScanCategory? category,
   }) async {
     final activeCategory = category;
-    final tags = activeCategory?.validTags ?? validTags;
+    final allowedTags = activeCategory?.validTags ?? validTags;
     final context = activeCategory?.geminiContext ?? 'aircraft or airplane';
 
     final image = await File(imagePath).readAsBytes();
     final prompt = TextPart('''
 Identify this $context and provide classification tags.
-Please select 3-5 tags from this EXACT list: ${tags.join(', ')}.
+Please select 3-5 tags from this EXACT list: ${allowedTags.join(', ')}.
 
 Also identify the maker/brand/manufacturer/species-family.
 

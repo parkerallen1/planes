@@ -162,7 +162,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                         itemCount: filteredPlanes.length,
                         itemBuilder: (context, index) {
                           final plane = filteredPlanes[index];
-                          return _buildPlaneCard(plane, index, settings);
+                          final planeNumber = filteredPlanes.length - index;
+                          return _buildPlaneCard(plane, planeNumber, index, settings);
                         },
                       ),
               ),
@@ -302,7 +303,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     );
   }
 
-  Widget _buildPlaneCard(Plane plane, int index, PokedexSettings settings) {
+  Widget _buildPlaneCard(Plane plane, int planeNumber, int gridIndex, PokedexSettings settings) {
     final isIdentifying = plane.status == PlaneStatus.identifying;
     final isPokedex = settings.isPokedex;
 
@@ -390,7 +391,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     children: [
                       if (isPokedex)
                         Text(
-                          '#${(index + 1).toString().padLeft(3, '0')}',
+                          '#${planeNumber.toString().padLeft(3, '0')}',
                           style: const TextStyle(
                             fontSize: 10,
                             color: AppThemes.pokedexBlue,
@@ -468,7 +469,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
     // Apply entry animation if enabled
     if (isPokedex && settings.entryAnimation) {
-      card = _AnimatedEntry(index: index, child: card);
+      card = _AnimatedEntry(index: gridIndex, child: card);
     }
 
     return card;
@@ -590,16 +591,20 @@ class _PokedexHeader extends StatelessWidget {
                     padding: const EdgeInsets.only(top: 8),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.end,
-                      crossAxisAlignment: CrossAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         // Planedex Logo
                         Expanded(
                           child: Align(
-                            alignment: Alignment.centerRight,
-                            child: Image.asset(
-                              'assets/images/planedex_logo.png',
-                              height: 80,
-                              fit: BoxFit.contain,
+                            alignment: Alignment.topRight,
+                            child: Transform.translate(
+                              offset: const Offset(0, -8),
+                              child: Image.asset(
+                                'assets/images/planedex_logo.png',
+                                height: 80,
+                                fit: BoxFit.contain,
+                                alignment: Alignment.topRight,
+                              ),
                             ),
                           ),
                         ),

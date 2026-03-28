@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:share_plus/share_plus.dart';
 import '../providers/theme_provider.dart';
 import '../providers/category_provider.dart';
 import '../models/scan_category.dart';
 import '../theme/app_themes.dart';
 import '../services/sound_service.dart';
+import '../services/storage_service.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -124,6 +126,13 @@ class SettingsScreen extends ConsumerWidget {
             _buildSectionHeader(context, 'Categories', isPokedex),
             const SizedBox(height: 16),
             _CategoryManager(isPokedex: isPokedex),
+
+            const SizedBox(height: 32),
+
+            // Data Section
+            _buildSectionHeader(context, 'Data', isPokedex),
+            const SizedBox(height: 16),
+            _ExportButton(isPokedex: isPokedex),
 
             const SizedBox(height: 32),
 
@@ -992,6 +1001,87 @@ class _CategoryManager extends ConsumerWidget {
             child: const Text('Reset'),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _ExportButton extends ConsumerStatefulWidget {
+  final bool isPokedex;
+
+  const _ExportButton({required this.isPokedex});
+
+  @override
+  ConsumerState<_ExportButton> createState() => _ExportButtonState();
+}
+
+class _ExportButtonState extends ConsumerState<_ExportButton> {
+  bool _exporting = false;
+
+  Future<void> _export() async {
+    setState(() => _exporting = true);
+    try {
+      final storage = ref.read(storageServiceProvider);
+      final file = await storage.exportToJson();
+      final xFile = XFile(file.path, mimeType: 'application/json');
+      await Share.shareXFiles([xFile]);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Export failed: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _exporting = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isPokedex = widget.isPokedex;
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardTheme.color,
+        borderRadius: BorderRadius.circular(12),
+        border: isPokedex
+            ? Border.all(
+                color: AppThemes.pokedexBlue.withValues(alpha: 0.3),
+                width: 1,
+              )
+            : null,
+      ),
+      child: ListTile(
+        leading: Icon(
+          Icons.download,
+          color: isPokedex ? AppThemes.pokedexLightBlue : Colors.blueAccent,
+        ),
+        title: Text(
+          isPokedex ? 'EXPORT BACKUP' : 'Export Backup',
+          style: TextStyle(
+            fontWeight: FontWeight.w600,
+            letterSpacing: isPokedex ? 0.5 : 0,
+            fontSize: 14,
+          ),
+        ),
+        subtitle: Text(
+          'Save all sightings as JSON',
+          style: TextStyle(
+            color: Colors.white60,
+            fontSize: 12,
+            letterSpacing: isPokedex ? 0.3 : 0,
+          ),
+        ),
+        trailing: _exporting
+            ? const SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : Icon(
+                Icons.share,
+                color: isPokedex ? AppThemes.pokedexBlue : Colors.blueAccent,
+              ),
+        onTap: _exporting ? null : _export,
       ),
     );
   }

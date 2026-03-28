@@ -197,7 +197,7 @@ class _AddPlaneScreenState extends ConsumerState<AddPlaneScreen>
       body: Center(
         child: _isAnalyzing
             ? _buildAnalyzingState(isPokedex)
-            : _buildCaptureState(isPokedex),
+            : _buildCaptureState(isPokedex, category),
       ),
     );
   }
@@ -296,7 +296,7 @@ class _AddPlaneScreenState extends ConsumerState<AddPlaneScreen>
     );
   }
 
-  Widget _buildCaptureState(bool isPokedex) {
+  Widget _buildCaptureState(bool isPokedex, var category) {
     return SingleChildScrollView(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -380,10 +380,10 @@ class _AddPlaneScreenState extends ConsumerState<AddPlaneScreen>
             const SizedBox(height: 24),
 
             // Analyze button
-            _buildAnalyzeButton(isPokedex),
+            _buildAnalyzeButton(isPokedex, category),
             const SizedBox(height: 24),
           ] else
-            _buildEmptyState(isPokedex),
+            _buildEmptyState(isPokedex, category),
 
           if (_statusMessage != null)
             Padding(
@@ -424,7 +424,7 @@ class _AddPlaneScreenState extends ConsumerState<AddPlaneScreen>
     );
   }
 
-  Widget _buildEmptyState(bool isPokedex) {
+  Widget _buildEmptyState(bool isPokedex, var category) {
     return Column(
       children: [
         Container(
@@ -476,7 +476,7 @@ class _AddPlaneScreenState extends ConsumerState<AddPlaneScreen>
     );
   }
 
-  Widget _buildAnalyzeButton(bool isPokedex) {
+  Widget _buildAnalyzeButton(bool isPokedex, var category) {
     return ElevatedButton.icon(
       onPressed: _analyzeImage,
       style: ElevatedButton.styleFrom(

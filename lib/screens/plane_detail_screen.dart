@@ -208,12 +208,47 @@ class _PlaneDetailScreenState extends ConsumerState<PlaneDetailScreen> {
       aspectRatio: 1.0,
       child: Stack(
         children: [
-          Image.file(
-            File(_plane.imagePath),
-            width: double.infinity,
-            height: double.infinity,
-            fit: BoxFit.cover,
-            gaplessPlayback: true,
+          GestureDetector(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => Scaffold(
+                    backgroundColor: Colors.black,
+                    appBar: AppBar(
+                      backgroundColor: Colors.black,
+                      iconTheme: const IconThemeData(color: Colors.white),
+                    ),
+                    body: SafeArea(
+                      child: Center(
+                        child: InteractiveViewer(
+                          panEnabled: true,
+                          minScale: 0.5,
+                          maxScale: 4.0,
+                          child: Hero(
+                            tag: 'plane_image_${_plane.id}',
+                            child: Image.file(
+                              File(_plane.imagePath),
+                              fit: BoxFit.contain,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            },
+            child: Hero(
+              tag: 'plane_image_${_plane.id}',
+              child: Image.file(
+                File(_plane.imagePath),
+                width: double.infinity,
+                height: double.infinity,
+                fit: BoxFit.cover,
+                gaplessPlayback: true,
+              ),
+            ),
           ),
           if (isPokedex) ...[
             // Gradient overlay
