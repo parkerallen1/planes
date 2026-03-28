@@ -1,11 +1,10 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/category_provider.dart';
-import '../providers/theme_provider.dart';
-import '../theme/app_themes.dart';
 
-/// Corner-mounted retro cog wheel for switching scan categories.
+/// Corner-mounted retro skeuomorphic cog wheel for switching scan categories.
 /// Only the top-left quarter of the wheel is visible, peeking from
 /// the bottom-right corner of the screen.
 class CategoryScrollWheel extends ConsumerStatefulWidget {
@@ -27,7 +26,7 @@ class _CategoryScrollWheelState extends ConsumerState<CategoryScrollWheel>
 
   // Pan tracking
   double _panAccum = 0.0;
-  static const double _panThreshold = 40.0;
+  static const double _panThreshold = 20.0;
 
   @override
   void initState() {
@@ -64,6 +63,7 @@ class _CategoryScrollWheelState extends ConsumerState<CategoryScrollWheel>
   }
 
   void _goNext() {
+    HapticFeedback.lightImpact();
     final state = ref.read(categoryProvider);
     final step = (2 * math.pi) / state.categories.length;
     _targetRotation += step;
@@ -72,6 +72,7 @@ class _CategoryScrollWheelState extends ConsumerState<CategoryScrollWheel>
   }
 
   void _goPrev() {
+    HapticFeedback.lightImpact();
     final state = ref.read(categoryProvider);
     final step = (2 * math.pi) / state.categories.length;
     _targetRotation -= step;
@@ -80,8 +81,9 @@ class _CategoryScrollWheelState extends ConsumerState<CategoryScrollWheel>
   }
 
   void _onPanUpdate(DragUpdateDetails details) {
-    // Accumulate vertical and horizontal delta — swipe up-left = next
-    _panAccum += (-details.delta.dy + -details.delta.dx) * 0.5;
+    // Intuitive corner wheel interaction: 
+    // Swipe UP (-dy) or RIGHT (+dx) rotates clockwise (Next).
+    _panAccum += (-details.delta.dy + details.delta.dx) * 0.5;
     if (_panAccum > _panThreshold) {
       _panAccum = 0;
       _goNext();
@@ -98,33 +100,17 @@ class _CategoryScrollWheelState extends ConsumerState<CategoryScrollWheel>
   @override
   Widget build(BuildContext context) {
     final categoryState = ref.watch(categoryProvider);
-    final settings = ref.watch(themeProvider);
-    final isPokedex = settings.isPokedex;
     final activeCategory = categoryState.activeCategory;
 
-    const double wheelSize = 150.0;
-    const double labelHeight = 28.0;
-    const double totalHeight = wheelSize + labelHeight + 8;
+    const double size = 180.0;
 
     return SizedBox(
-      width: wheelSize,
-      height: totalHeight,
+      width: size,
+      height: size,
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          // Category label tag — above the wheel
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: _CategoryLabel(
-              name: activeCategory.name,
-              emoji: activeCategory.emoji,
-              isPokedex: isPokedex,
-            ),
-          ),
-
-          // The cog wheel itself
+          // BOTTOM: Animated cog wheel layer
           Positioned(
             bottom: 0,
             right: 0,
@@ -133,163 +119,227 @@ class _CategoryScrollWheelState extends ConsumerState<CategoryScrollWheel>
               onPanEnd: _onPanEnd,
               onTap: _goNext,
               child: SizedBox(
-                width: wheelSize,
-                height: wheelSize,
-                child: Stack(
-                  children: [
-                    // Animated cog
-                    AnimatedBuilder(
-                      animation: _rotationAnimation,
-                      builder: (context, _) {
-                        return CustomPaint(
-                          size: const Size(wheelSize, wheelSize),
-                          painter: _CogWheelPainter(
-                            rotation: _rotationAnimation.value,
-                            isPokedex: isPokedex,
-                            categoryCount: categoryState.categories.length,
-                            activeIndex: categoryState.activeIndex,
-                          ),
-                        );
-                      },
-                    ),
-
-                    // Plus button near the corner (center of cog)
-                    Positioned(
-                      right: 6,
-                      bottom: 6,
-                      child: GestureDetector(
-                        onTap: widget.onAddPressed,
-                        behavior: HitTestBehavior.opaque,
-                        child: _PlusButton(isPokedex: isPokedex),
+                width: size,
+                height: size,
+                child: AnimatedBuilder(
+                  animation: _rotationAnimation,
+                  builder: (context, _) {
+                    return CustomPaint(
+                      size: const Size(size, size),
+                      painter: _CogWheelPainter(
+                        rotation: _rotationAnimation.value,
+                        categoryCount: categoryState.categories.length,
+                        activeIndex: categoryState.activeIndex,
                       ),
-                    ),
-                  ],
+                    );
+                  },
                 ),
               ),
             ),
           ),
+
+          // MIDDLE: The charcoal plastic casing with arc cutout
+          Positioned.fill(
+            child: IgnorePointer(
+              child: CustomPaint(
+                painter: _CasingShellPainter(),
+              ),
+            ),
+          ),
+
+          // TOP: UI Elements (Text, Window, Button)
+          // MODE Text
+          Positioned(
+            top: 36,
+            left: 20,
+            child: Transform.rotate(
+              angle: -math.pi / 4, // 45 degrees diagonal
+              child: const Text(
+                'MODE',
+                style: TextStyle(
+                  color: Colors.white70,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 2.0,
+                ),
+              ),
+            ),
+          ),
+
+          // Settings Film Counter Window
+          Positioned(
+            top: 14,
+            right: 14,
+            child: _SkeuomorphicCounterWindow(
+              index: categoryState.activeIndex + 1,
+              emoji: activeCategory.emoji,
+            ),
+          ),
+
+          // Physical Plus button near the corner
+          Positioned(
+            right: 12,
+            bottom: 12,
+            child: GestureDetector(
+              onTap: widget.onAddPressed,
+              behavior: HitTestBehavior.opaque,
+              child: const _PlusButton(),
+            ),
+          ),
         ],
       ),
     );
   }
 }
 
-/// Category name label with retro styling
-class _CategoryLabel extends StatelessWidget {
-  final String name;
-  final String emoji;
-  final bool isPokedex;
+/// Draws the solid black casing shell *over* the gear, with a circular cutout.
+class _CasingShellPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    // 1. Base Casing Path
+    const cornerRadius = 70.0;
+    final casingPath = Path()
+      ..addRRect(RRect.fromRectAndCorners(
+        Rect.fromLTWH(0, 0, size.width, size.height),
+        topLeft: const Radius.circular(cornerRadius),
+      ));
 
-  const _CategoryLabel({
-    required this.name,
+    // 2. The Hole Cutout (Radius 162 ensures it fits the gear's 157 radius nicely)
+    const holeRadius = 162.0;
+    final holeCenter = Offset(size.width, size.height);
+    final holePath = Path()
+      ..addOval(Rect.fromCircle(center: holeCenter, radius: holeRadius));
+
+    // Fill the casing (everything in casingPath EXCEPT holePath)
+    final combinedPath = Path.combine(PathOperation.difference, casingPath, holePath);
+
+    // 3. Drop Shadow of outer casing frame
+    canvas.drawShadow(combinedPath, Colors.black87, 8.0, false);
+
+    // 4. Fill Casing Material
+    final fillPaint = Paint()
+      ..color = const Color(0xFF222222) // Matte charcoal plastic
+      ..style = PaintingStyle.fill;
+    canvas.drawPath(combinedPath, fillPaint);
+
+    // 5. Casing Bevel Highlight
+    final casingBevel = Paint()
+      ..color = Colors.white.withValues(alpha: 0.12)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.0;
+    canvas.drawPath(combinedPath, casingBevel);
+
+    // 6. Hole Cutout Inner Shadow (Cast onto the gear below)
+    canvas.save();
+    canvas.clipPath(holePath); // Constrain painting to inside the hole only
+
+    final holeShadowPaint = Paint()
+      ..color = Colors.black.withValues(alpha: 0.7)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 16.0
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
+    
+    // Draw the stroke exactly on the rim of the hole; half will expand inwards creating a shadow.
+    canvas.drawPath(holePath, holeShadowPaint);
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+/// A recessed "film counter" style indicator showing the current category
+class _SkeuomorphicCounterWindow extends StatelessWidget {
+  final int index;
+  final String emoji;
+
+  const _SkeuomorphicCounterWindow({
+    required this.index,
     required this.emoji,
-    required this.isPokedex,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Align(
-      alignment: Alignment.centerRight,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-        decoration: BoxDecoration(
-          color: isPokedex
-              ? AppThemes.pokedexDarkRed.withValues(alpha: 0.95)
-              : const Color(0xFF1A1A3E).withValues(alpha: 0.95),
-          borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(8),
-            topRight: Radius.circular(8),
-            bottomLeft: Radius.circular(8),
-          ),
-          border: Border.all(
-            color: isPokedex
-                ? AppThemes.pokedexRed.withValues(alpha: 0.8)
-                : Colors.blueAccent.withValues(alpha: 0.6),
-            width: 1.5,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: isPokedex
-                  ? AppThemes.pokedexRed.withValues(alpha: 0.3)
-                  : Colors.blueAccent.withValues(alpha: 0.2),
-              blurRadius: 6,
-              spreadRadius: 0,
-            ),
-          ],
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(emoji, style: const TextStyle(fontSize: 12)),
-            const SizedBox(width: 5),
-            Text(
-              name.toUpperCase(),
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 10,
-                fontWeight: FontWeight.bold,
-                letterSpacing: isPokedex ? 1.5 : 0.5,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// Plus button that sits at the cog center (screen corner)
-class _PlusButton extends StatelessWidget {
-  final bool isPokedex;
-
-  const _PlusButton({required this.isPokedex});
-
-  @override
-  Widget build(BuildContext context) {
-    final color = isPokedex ? AppThemes.pokedexRed : Colors.blueAccent;
     return Container(
-      width: 38,
-      height: 38,
+      width: 56,
+      height: 32,
       decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: color,
-        border: Border.all(color: Colors.white.withValues(alpha: 0.4), width: 2),
+        color: const Color(0xFFF0F0F0), // White plastic background
+        borderRadius: const BorderRadius.all(Radius.circular(4)),
+        border: Border.all(color: Colors.black87, width: 2),
         boxShadow: [
           BoxShadow(
-            color: color.withValues(alpha: 0.6),
-            blurRadius: 10,
-            spreadRadius: 1,
-          ),
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.4),
-            blurRadius: 4,
-            offset: const Offset(-1, -1),
+            color: Colors.black.withValues(alpha: 0.3),
+            offset: const Offset(1, 1),
+            blurRadius: 2,
           ),
         ],
       ),
-      child: const Icon(Icons.add, color: Colors.white, size: 20),
+      child: Center(
+        child: Text(
+          '${index.toString().padLeft(2, '0')} $emoji',
+          style: const TextStyle(
+            color: Color(0xFF111111), // Bold ink black
+            fontSize: 12,
+            fontWeight: FontWeight.w900,
+            fontFamily: 'Courier', // Gives it a stamped serial number feel
+            letterSpacing: -0.5,
+          ),
+        ),
+      ),
     );
   }
 }
 
-/// Custom painter for the retro gear/cog wheel.
+/// A chunky, matte gray physical button that replaces the neon one.
+class _PlusButton extends StatelessWidget {
+  const _PlusButton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 44,
+      height: 44,
+      decoration: const BoxDecoration(
+        shape: BoxShape.circle,
+        color: Color(0xFF888888), // Medium grey plastic
+        boxShadow: [
+          // White bevel on top-left
+          BoxShadow(color: Colors.white70, offset: Offset(-1, -1), blurRadius: 1),
+          // Dark drop shadow on bottom-right
+          BoxShadow(color: Colors.black87, offset: Offset(1.5, 1.5), blurRadius: 2),
+        ],
+      ),
+      child: const Center(
+        child: Text(
+          '+',
+          style: TextStyle(
+            color: Color(0xFF333333), // Dark engraved ink
+            fontSize: 24,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Custom painter for the 90s gray plastic gear.
 /// The cog center is drawn at (size.width, size.height) — the bottom-right
 /// corner of the widget — so only the top-left quadrant is visible.
 class _CogWheelPainter extends CustomPainter {
   final double rotation;
-  final bool isPokedex;
   final int categoryCount;
   final int activeIndex;
 
   static const double _outerRadius = 135.0;
-  static const double _innerRadius = 52.0;
-  static const double _toothHeight = 16.0;
-  static const double _hubRadius = 28.0;
-  static const int _numTeeth = 22;
+  static const double _innerRadius = 55.0;
+  static const double _toothHeight = 22.0;
+  static const double _hubRadius = 32.0;
+  static const int _numTeeth = 18;
 
   _CogWheelPainter({
     required this.rotation,
-    required this.isPokedex,
     required this.categoryCount,
     required this.activeIndex,
   });
@@ -305,83 +355,54 @@ class _CogWheelPainter extends CustomPainter {
     _drawCogBody(canvas);
     _drawCogTeeth(canvas);
     _drawInnerRing(canvas);
-    _drawCategoryDots(canvas);
+    _drawCategoryDimples(canvas);
     _drawHubHighlight(canvas);
 
     canvas.restore();
-
-    // Outer glow / rim (not rotated)
-    _drawRimGlow(canvas, center);
   }
 
   void _drawCogBody(Canvas canvas) {
-    final baseColor = isPokedex
-        ? const Color(0xFF1A1A2E)
-        : const Color(0xFF18182E);
-    final edgeColor = isPokedex
-        ? AppThemes.pokedexBlue.withValues(alpha: 0.7)
-        : Colors.blueAccent.withValues(alpha: 0.5);
-
-    // Build the cog path (circle with teeth)
     final path = _buildCogPath();
 
-    // Main fill with radial gradient
+    // Matte plastic linear gradient giving consistent lighting
     final fillPaint = Paint()
-      ..shader = RadialGradient(
+      ..shader = const LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
         colors: [
-          const Color(0xFF2E2E4E),
-          baseColor,
-          const Color(0xFF0E0E1E),
+          Color(0xFF888888),
+          Color(0xFF7A7A7A),
+          Color(0xFF5A5A5A),
         ],
-        stops: const [0.0, 0.5, 1.0],
-        center: const Alignment(-0.3, -0.3),
       ).createShader(
-        Rect.fromCircle(center: Offset.zero, radius: _outerRadius + _toothHeight),
+        Rect.fromCircle(
+            center: Offset.zero, radius: _outerRadius + _toothHeight),
       )
       ..style = PaintingStyle.fill;
 
     canvas.drawPath(path, fillPaint);
 
-    // Edge stroke
+    // Embossed edge stroke
     final strokePaint = Paint()
-      ..color = edgeColor
+      ..color = const Color(0xFF555555) // Dark outline
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2.0;
 
     canvas.drawPath(path, strokePaint);
-
-    // Metallic sheen — arc highlight on top-left
-    final sheenPaint = Paint()
-      ..shader = SweepGradient(
-        colors: [
-          Colors.white.withValues(alpha: 0.0),
-          Colors.white.withValues(alpha: 0.08),
-          Colors.white.withValues(alpha: 0.0),
-        ],
-        stops: const [0.0, 0.15, 0.3],
-        startAngle: math.pi,
-        endAngle: math.pi * 1.7,
-      ).createShader(
-        Rect.fromCircle(center: Offset.zero, radius: _outerRadius),
-      )
-      ..style = PaintingStyle.fill;
-
-    canvas.drawPath(path, sheenPaint);
   }
 
   Path _buildCogPath() {
     final path = Path();
     final angleStep = (2 * math.pi) / _numTeeth;
-    final halfTooth = angleStep * 0.28;
+    final halfTooth = angleStep * 0.35; // Chunkier, broader teeth for plastic
 
     for (int i = 0; i < _numTeeth; i++) {
       final angle = i * angleStep;
 
-      // Four points per tooth (trapezoidal teeth)
-      final a1 = angle - halfTooth * 1.1; // outer left base
-      final a2 = angle - halfTooth * 0.7; // outer left tip
-      final a3 = angle + halfTooth * 0.7; // outer right tip
-      final a4 = angle + halfTooth * 1.1; // outer right base
+      final a1 = angle - halfTooth * 1.0;
+      final a2 = angle - halfTooth * 0.7;
+      final a3 = angle + halfTooth * 0.7;
+      final a4 = angle + halfTooth * 1.0;
 
       final p1 = Offset(
         math.cos(a1) * _outerRadius,
@@ -414,18 +435,26 @@ class _CogWheelPainter extends CustomPainter {
   }
 
   void _drawCogTeeth(Canvas canvas) {
-    // Draw tooth edge highlights for metallic feel
+    // Add specular white highlights on the leading edges of the plastic teeth
     final highlightPaint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.12)
+      ..color = Colors.white.withValues(alpha: 0.15)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.5
+      ..strokeWidth = 2.5
+      ..strokeCap = StrokeCap.round;
+
+    final shadowPaint = Paint()
+      ..color = Colors.black.withValues(alpha: 0.3)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.0
       ..strokeCap = StrokeCap.round;
 
     final angleStep = (2 * math.pi) / _numTeeth;
-    final halfTooth = angleStep * 0.28;
+    final halfTooth = angleStep * 0.35;
 
     for (int i = 0; i < _numTeeth; i++) {
       final angle = i * angleStep;
+
+      // Leading tip
       final a2 = angle - halfTooth * 0.7;
       final a3 = angle + halfTooth * 0.7;
 
@@ -438,42 +467,50 @@ class _CogWheelPainter extends CustomPainter {
         math.sin(a3) * (_outerRadius + _toothHeight),
       );
 
-      canvas.drawLine(p2, p3, highlightPaint);
+      // Trailing side dip down to base
+      final a4 = angle + halfTooth * 1.0;
+      final p4 = Offset(
+        math.cos(a4) * _outerRadius,
+        math.sin(a4) * _outerRadius,
+      );
+
+      // Draw light hitting the top left surfaces
+      if (angle > math.pi && angle < 1.6 * math.pi) {
+         canvas.drawLine(p2, p3, highlightPaint);
+      } else {
+         canvas.drawLine(p3, p4, shadowPaint);
+      }
     }
   }
 
   void _drawInnerRing(Canvas canvas) {
-    final ringColor = isPokedex
-        ? AppThemes.pokedexBlue.withValues(alpha: 0.5)
-        : Colors.blueAccent.withValues(alpha: 0.4);
-
-    // Inner track groove
+    // Inner track groove - carved in dark grey
     final groovePaint = Paint()
-      ..color = const Color(0xFF0A0A18)
+      ..color = const Color(0xFF666666)
       ..style = PaintingStyle.fill;
 
     canvas.drawCircle(Offset.zero, _innerRadius, groovePaint);
 
-    final grooveRingPaint = Paint()
-      ..color = ringColor
+    final shadowRingPaint = Paint()
+      ..color = Colors.black.withValues(alpha: 0.4)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.0;
+      ..strokeWidth = 3.0;
 
-    canvas.drawCircle(Offset.zero, _innerRadius, grooveRingPaint);
+    canvas.drawCircle(Offset.zero, _innerRadius, shadowRingPaint);
 
-    // Inner groove line
+    // Inner groove distinct line
     final innerGroovePaint = Paint()
-      ..color = ringColor.withValues(alpha: 0.4)
+      ..color = const Color(0xFF555555)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.0;
 
     canvas.drawCircle(Offset.zero, _innerRadius - 6, innerGroovePaint);
   }
 
-  void _drawCategoryDots(Canvas canvas) {
+  void _drawCategoryDimples(Canvas canvas) {
     if (categoryCount <= 0) return;
 
-    final dotRadius = _innerRadius - 14;
+    final dotRadius = _innerRadius - 16;
     final anglePerCategory = (2 * math.pi) / categoryCount;
 
     for (int i = 0; i < categoryCount; i++) {
@@ -483,84 +520,49 @@ class _CogWheelPainter extends CustomPainter {
         math.sin(angle) * dotRadius,
       );
 
-      final isActive = i == activeIndex;
-      final dotColor = isActive
-          ? (isPokedex ? AppThemes.pokedexYellow : Colors.blueAccent)
-          : Colors.white.withValues(alpha: 0.2);
+      // Recessed hole dimple
+      final dotPaint = Paint()..color = const Color(0xFF333333); // Dark shadow in hole
+      canvas.drawCircle(pos, 4.0, dotPaint);
 
-      final dotPaint = Paint()
-        ..color = dotColor
-        ..style = PaintingStyle.fill;
-
-      canvas.drawCircle(pos, isActive ? 4.5 : 3.0, dotPaint);
-
-      if (isActive) {
-        final glowPaint = Paint()
-          ..color = dotColor.withValues(alpha: 0.4)
-          ..style = PaintingStyle.fill;
-        canvas.drawCircle(pos, 7.0, glowPaint);
-      }
+      final glowPaint = Paint()
+        ..color = Colors.white.withValues(alpha: 0.25)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.5;
+      
+      canvas.drawCircle(pos, 4.5, glowPaint); // Bevel edge
     }
   }
 
   void _drawHubHighlight(Canvas canvas) {
-    // Hub circle (center knob area)
-    final hubGradient = RadialGradient(
-      colors: [
-        Colors.white.withValues(alpha: 0.15),
-        Colors.transparent,
-      ],
-      stops: const [0.0, 1.0],
-      center: const Alignment(-0.3, -0.3),
-    );
-
     final hubPaint = Paint()
-      ..shader = hubGradient.createShader(
-        Rect.fromCircle(center: Offset.zero, radius: _hubRadius),
-      )
+      ..color = const Color(0xFF7A7A7A)
       ..style = PaintingStyle.fill;
 
     canvas.drawCircle(Offset.zero, _hubRadius, hubPaint);
 
+    // Elevated hub ring
     final hubRingPaint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.2)
+      ..color = Colors.white.withValues(alpha: 0.4)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.5;
 
     canvas.drawCircle(Offset.zero, _hubRadius, hubRingPaint);
-  }
-
-  void _drawRimGlow(Canvas canvas, Offset center) {
-    final rimColor = isPokedex
-        ? AppThemes.pokedexBlue.withValues(alpha: 0.15)
-        : Colors.blueAccent.withValues(alpha: 0.1);
-
-    final rimPaint = Paint()
-      ..color = rimColor
+    
+    // Bottom right drop shadow on the hub
+    final hubShadowPaint = Paint()
+      ..color = Colors.black.withValues(alpha: 0.3)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 8
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6);
-
-    // Draw just the visible arc (top-left quarter from center)
-    const startAngle = math.pi; // left
-    const sweepAngle = -math.pi / 2; // counterclockwise to up
+      ..strokeWidth = 2.0;
 
     canvas.drawArc(
-      Rect.fromCircle(
-        center: center,
-        radius: _outerRadius + _toothHeight + 2,
-      ),
-      startAngle,
-      sweepAngle,
-      false,
-      rimPaint,
+       Rect.fromCircle(center: Offset.zero, radius: _hubRadius),
+       0, math.pi / 2, false, hubShadowPaint,
     );
   }
 
   @override
   bool shouldRepaint(_CogWheelPainter oldDelegate) {
     return oldDelegate.rotation != rotation ||
-        oldDelegate.isPokedex != isPokedex ||
         oldDelegate.activeIndex != activeIndex ||
         oldDelegate.categoryCount != categoryCount;
   }
