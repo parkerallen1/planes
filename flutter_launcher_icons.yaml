@@ -1,10 +1,16 @@
 flutter_launcher_icons:
   android: "launcher_icon"
   ios: true
-  image_path: "assets/icon.jpg"
+  # Legacy square icon (pre-Android 8 / fallback): logo on black
+  image_path: "assets/icon_legacy.png"
+  # Adaptive icon (Android 8+ / Nothing OS): black background + safe-zone foreground
+  adaptive_icon_background: "#000000"
+  adaptive_icon_foreground: "assets/icon_foreground_padded.png"
+  # Monochrome themed-icon layer (Android 13+ / Nothing OS themed icons)
+  adaptive_icon_monochrome: "assets/icon_foreground_padded.png"
   min_sdk_android: 21 # android min sdk min:16, default 21
   web:
     generate: true
-    image_path: "assets/icon.jpg"
-    background_color: "#hex_code"
-    theme_color: "#hex_code"
+    image_path: "assets/icon_legacy.png"
+    background_color: "#000000"
+    theme_color: "#000000"
