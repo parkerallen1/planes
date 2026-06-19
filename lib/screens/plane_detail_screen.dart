@@ -227,10 +227,15 @@ class _PlaneDetailScreenState extends ConsumerState<PlaneDetailScreen> {
                           maxScale: 4.0,
                           child: Hero(
                             tag: 'plane_image_${_plane.id}',
-                            child: Image.file(
-                              File(_plane.imagePath),
-                              fit: BoxFit.contain,
-                            ),
+                            child: _plane.imagePath.startsWith('assets/')
+                                ? Image.asset(
+                                    _plane.imagePath,
+                                    fit: BoxFit.contain,
+                                  )
+                                : Image.file(
+                                    File(_plane.imagePath),
+                                    fit: BoxFit.contain,
+                                  ),
                           ),
                         ),
                       ),
@@ -241,13 +246,20 @@ class _PlaneDetailScreenState extends ConsumerState<PlaneDetailScreen> {
             },
             child: Hero(
               tag: 'plane_image_${_plane.id}',
-              child: Image.file(
-                File(_plane.imagePath),
-                width: double.infinity,
-                height: double.infinity,
-                fit: BoxFit.cover,
-                gaplessPlayback: true,
-              ),
+              child: _plane.imagePath.startsWith('assets/')
+                  ? Image.asset(
+                      _plane.imagePath,
+                      width: double.infinity,
+                      height: double.infinity,
+                      fit: BoxFit.cover,
+                    )
+                  : Image.file(
+                      File(_plane.imagePath),
+                      width: double.infinity,
+                      height: double.infinity,
+                      fit: BoxFit.cover,
+                      gaplessPlayback: true,
+                    ),
             ),
           ),
           if (isPokedex) ...[
@@ -264,6 +276,16 @@ class _PlaneDetailScreenState extends ConsumerState<PlaneDetailScreen> {
                       AppThemes.pokedexBlack.withOpacity(0.9),
                     ],
                   ),
+                ),
+              ),
+            ),
+            // Targeting Viewfinder brackets
+            Positioned.fill(
+              child: CustomPaint(
+                painter: DetailViewfinderBracketsPainter(
+                  color: isIdentifying
+                      ? AppThemes.pokedexYellow.withOpacity(0.8)
+                      : AppThemes.pokedexBlue.withOpacity(0.4),
                 ),
               ),
             ),
@@ -442,13 +464,22 @@ class _PlaneDetailScreenState extends ConsumerState<PlaneDetailScreen> {
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: isPokedex
-                  ? AppThemes.pokedexCard
+                  ? const Color(0xFF0F140C)
                   : Colors.yellow.withOpacity(0.1),
               border: Border.all(
                 color: isPokedex ? AppThemes.pokedexYellow : Colors.yellow,
-                width: isPokedex ? 2 : 1,
+                width: isPokedex ? 1.5 : 1,
               ),
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(isPokedex ? 6 : 8),
+              boxShadow: isPokedex
+                  ? [
+                      BoxShadow(
+                        color: AppThemes.pokedexYellow.withOpacity(0.15),
+                        blurRadius: 6,
+                        spreadRadius: 1,
+                      ),
+                    ]
+                  : null,
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -473,9 +504,15 @@ class _PlaneDetailScreenState extends ConsumerState<PlaneDetailScreen> {
                 const SizedBox(height: 8),
                 Text(
                   _plane.identificationTips.isNotEmpty
-                      ? _plane.identificationTips
+                      ? (isPokedex ? _plane.identificationTips.toUpperCase() : _plane.identificationTips)
                       : 'No tips available.',
-                  style: TextStyle(color: isPokedex ? Colors.white70 : null),
+                  style: TextStyle(
+                    color: isPokedex ? AppThemes.pokedexYellow : null,
+                    fontFamily: isPokedex ? 'Courier' : null,
+                    fontSize: isPokedex ? 13 : null,
+                    fontWeight: isPokedex ? FontWeight.bold : null,
+                    height: isPokedex ? 1.4 : null,
+                  ),
                 ),
               ],
             ),
@@ -808,11 +845,27 @@ class _PlaneDetailScreenState extends ConsumerState<PlaneDetailScreen> {
             width: double.infinity,
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: AppThemes.pokedexCard,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: ledColor.withOpacity(0.3)),
+              color: const Color(0xFF0F140C),
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(color: ledColor.withOpacity(0.6), width: 1.5),
+              boxShadow: [
+                BoxShadow(
+                  color: ledColor.withOpacity(0.15),
+                  blurRadius: 6,
+                  spreadRadius: 1,
+                ),
+              ],
             ),
-            child: Text(content, style: TextStyle(color: Colors.white70)),
+            child: Text(
+              content.toUpperCase(),
+              style: TextStyle(
+                color: ledColor,
+                fontFamily: 'Courier',
+                fontSize: 13,
+                fontWeight: FontWeight.bold,
+                height: 1.4,
+              ),
+            ),
           )
         else
           Text(content),
@@ -998,109 +1051,214 @@ class _PlaneDetailScreenState extends ConsumerState<PlaneDetailScreen> {
   }
 
   Widget _buildChatHistory(bool isPokedex) {
-    return ListView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: _plane.chatHistory.length,
-      itemBuilder: (context, index) {
-        final msg = _plane.chatHistory[index];
-        return Align(
-          alignment: msg.isUser ? Alignment.centerRight : Alignment.centerLeft,
-          child: Container(
-            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: msg.isUser
-                  ? (isPokedex ? AppThemes.pokedexRed : Colors.blueAccent)
-                  : (isPokedex ? AppThemes.pokedexCard : Colors.grey[800]),
-              borderRadius: BorderRadius.circular(12),
-              border: isPokedex && !msg.isUser
-                  ? Border.all(color: AppThemes.pokedexBlue.withOpacity(0.5))
-                  : null,
+    if (!isPokedex) {
+      return ListView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        itemCount: _plane.chatHistory.length,
+        itemBuilder: (context, index) {
+          final msg = _plane.chatHistory[index];
+          return Align(
+            alignment: msg.isUser ? Alignment.centerRight : Alignment.centerLeft,
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: msg.isUser ? Colors.blueAccent : Colors.grey[800],
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(msg.text),
             ),
-            child: Column(
+          );
+        },
+      );
+    }
+
+    // Pokedex CLI Terminal Mode
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.all(12),
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: const Color(0xFF070B19), // Cyber terminal dark background
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: AppThemes.pokedexBlue.withOpacity(0.4),
+          width: 1.5,
+        ),
+      ),
+      child: _plane.chatHistory.isEmpty
+          ? const Padding(
+              padding: EdgeInsets.symmetric(vertical: 24),
+              child: Center(
+                child: Text(
+                  'PLANEDEX CORE v1.0.4\nWAITING FOR DIAGNOSTIC QUERY...',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontFamily: 'Courier',
+                    color: Colors.white30,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            )
+          : Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (isPokedex && !msg.isUser)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 6),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        _buildLedIndicator(AppThemes.pokedexGreen),
-                        const SizedBox(width: 6),
-                        Text(
-                          'ANALYSIS',
+              children: _plane.chatHistory.map((msg) {
+                final timestampStr = "${msg.timestamp.hour.toString().padLeft(2, '0')}:${msg.timestamp.minute.toString().padLeft(2, '0')}:${msg.timestamp.second.toString().padLeft(2, '0')}";
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 12.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        msg.isUser
+                            ? 'USER >'
+                            : 'PLANEDEX_CORE [$timestampStr] >',
+                        style: TextStyle(
+                          fontFamily: 'Courier',
+                          fontWeight: FontWeight.bold,
+                          fontSize: 11,
+                          color: msg.isUser
+                              ? AppThemes.pokedexLightBlue
+                              : AppThemes.pokedexGreen,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Padding(
+                        padding: const EdgeInsets.only(left: 8.0),
+                        child: Text(
+                          msg.text.toUpperCase(),
                           style: TextStyle(
-                            fontSize: 10,
-                            color: AppThemes.pokedexGreen,
-                            letterSpacing: 1,
-                            fontWeight: FontWeight.bold,
+                            fontFamily: 'Courier',
+                            fontSize: 13,
+                            color: msg.isUser
+                                ? Colors.white
+                                : AppThemes.pokedexGreen.withOpacity(0.9),
+                            height: 1.4,
                           ),
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-                Text(msg.text),
-              ],
+                );
+              }).toList(),
             ),
-          ),
-        );
-      },
     );
   }
 
   Widget _buildChatInput(bool isPokedex) {
+    if (!isPokedex) {
+      return SafeArea(
+        top: false,
+        child: Container(
+          padding: const EdgeInsets.all(8.0),
+          child: Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _chatController,
+                  decoration: const InputDecoration(
+                    hintText: 'Ask about this plane...',
+                    border: OutlineInputBorder(),
+                  ),
+                  enabled: !_isSending,
+                ),
+              ),
+              const SizedBox(width: 8),
+              IconButton(
+                icon: _isSending
+                    ? const SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.send),
+                onPressed: _isSending ? null : _sendMessage,
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // Pokedex CLI prompt input
     return SafeArea(
       top: false,
       child: Container(
-        padding: const EdgeInsets.all(8.0),
-        decoration: isPokedex
-            ? BoxDecoration(
-                color: AppThemes.pokedexCard,
-                border: Border(
-                  top: BorderSide(
-                    color: AppThemes.pokedexBlue.withOpacity(0.5),
-                  ),
-                ),
-              )
-            : null,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: AppThemes.pokedexBlack,
+          border: Border(
+            top: BorderSide(
+              color: AppThemes.pokedexBlue.withOpacity(0.4),
+              width: 1.5,
+            ),
+          ),
+        ),
         child: Row(
           children: [
+            const Text(
+              'QUERY > ',
+              style: TextStyle(
+                fontFamily: 'Courier',
+                fontWeight: FontWeight.bold,
+                fontSize: 13,
+                color: AppThemes.pokedexLightBlue,
+              ),
+            ),
             Expanded(
               child: TextField(
                 controller: _chatController,
-                decoration: InputDecoration(
-                  hintText: isPokedex
-                      ? 'Query aircraft database...'
-                      : 'Ask about this plane...',
-                  border: const OutlineInputBorder(),
+                style: const TextStyle(
+                  fontFamily: 'Courier',
+                  fontSize: 13,
+                  color: Colors.white,
+                ),
+                decoration: const InputDecoration(
+                  hintText: 'RUN DIAGNOSTIC QUERY...',
+                  hintStyle: TextStyle(
+                    fontFamily: 'Courier',
+                    color: Colors.white30,
+                    fontSize: 12,
+                  ),
+                  filled: true,
+                  fillColor: Color(0xFF070B19),
+                  contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  border: OutlineInputBorder(
+                    borderSide: BorderSide.none,
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderSide: BorderSide.none,
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderSide: BorderSide.none,
+                  ),
                 ),
                 enabled: !_isSending,
+                onSubmitted: (_) => _isSending ? null : _sendMessage(),
               ),
             ),
             const SizedBox(width: 8),
             Container(
-              decoration: isPokedex
-                  ? BoxDecoration(
-                      color: AppThemes.pokedexRed,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.white24, width: 2),
-                    )
-                  : null,
+              decoration: BoxDecoration(
+                color: AppThemes.pokedexRed,
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.white30, width: 1.5),
+              ),
               child: IconButton(
+                iconSize: 18,
                 icon: _isSending
-                    ? SizedBox(
-                        width: 24,
-                        height: 24,
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation(
-                            isPokedex ? Colors.white : null,
-                          ),
+                          valueColor: AlwaysStoppedAnimation(Colors.white),
                         ),
                       )
-                    : Icon(Icons.send, color: isPokedex ? Colors.white : null),
+                    : const Icon(Icons.keyboard_return, color: Colors.white),
                 onPressed: _isSending ? null : _sendMessage,
               ),
             ),
@@ -1109,4 +1267,71 @@ class _PlaneDetailScreenState extends ConsumerState<PlaneDetailScreen> {
       ),
     );
   }
+}
+
+class DetailViewfinderBracketsPainter extends CustomPainter {
+  final Color color;
+  DetailViewfinderBracketsPainter({required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.5;
+
+    const length = 24.0;
+    const margin = 20.0;
+
+    // Top Left
+    canvas.drawLine(
+      const Offset(margin, margin),
+      const Offset(margin + length, margin),
+      paint,
+    );
+    canvas.drawLine(
+      const Offset(margin, margin),
+      const Offset(margin, margin + length),
+      paint,
+    );
+
+    // Top Right
+    canvas.drawLine(
+      Offset(size.width - margin, margin),
+      Offset(size.width - margin - length, margin),
+      paint,
+    );
+    canvas.drawLine(
+      Offset(size.width - margin, margin),
+      Offset(size.width - margin, margin + length),
+      paint,
+    );
+
+    // Bottom Left
+    canvas.drawLine(
+      Offset(margin, size.height - margin),
+      Offset(margin + length, size.height - margin),
+      paint,
+    );
+    canvas.drawLine(
+      Offset(margin, size.height - margin),
+      Offset(margin, size.height - margin - length),
+      paint,
+    );
+
+    // Bottom Right
+    canvas.drawLine(
+      Offset(size.width - margin, size.height - margin),
+      Offset(size.width - margin - length, size.height - margin),
+      paint,
+    );
+    canvas.drawLine(
+      Offset(size.width - margin, size.height - margin),
+      Offset(size.width - margin, size.height - margin - length),
+      paint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

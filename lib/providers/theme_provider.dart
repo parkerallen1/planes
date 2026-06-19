@@ -57,7 +57,7 @@ class PokedexSettings {
   final bool bootAnimation;
 
   const PokedexSettings({
-    this.themeMode = AppThemeMode.classic,
+    this.themeMode = AppThemeMode.pokedex,
     this.font = PokedexFont.system,
     this.screenFrame = true,
     this.animatedLeds = true,
@@ -116,7 +116,7 @@ class ThemeNotifier extends Notifier<PokedexSettings> {
   @override
   PokedexSettings build() {
     _loadSettings();
-    return const PokedexSettings();
+    return const PokedexSettings(themeMode: AppThemeMode.pokedex);
   }
 
   /// Load all settings from shared preferences
@@ -127,9 +127,9 @@ class ThemeNotifier extends Notifier<PokedexSettings> {
     final fontName = prefs.getString(_fontKey);
 
     state = PokedexSettings(
-      themeMode: themeName == AppThemeMode.pokedex.name
-          ? AppThemeMode.pokedex
-          : AppThemeMode.classic,
+      themeMode: themeName == AppThemeMode.classic.name
+          ? AppThemeMode.classic
+          : AppThemeMode.pokedex,
       font: PokedexFont.values.firstWhere(
         (f) => f.name == fontName,
         orElse: () => PokedexFont.system,

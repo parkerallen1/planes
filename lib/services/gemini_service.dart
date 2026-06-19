@@ -20,7 +20,7 @@ class GeminiService {
   late final GenerativeModel _model;
 
   GeminiService({required this.apiKey}) {
-    _model = GenerativeModel(model: 'gemini-3-pro-preview', apiKey: apiKey);
+    _model = GenerativeModel(model: 'gemini-3.5-flash', apiKey: apiKey);
   }
 
   // Default tags for planes (kept for backward compatibility)
@@ -105,9 +105,9 @@ Return the response in JSON format:
       Content.multi([prompt, DataPart('image/jpeg', image)]),
     ];
 
-    // Use gemini-3-pro-preview as requested
+    // Use gemini-3.5-flash as requested
     final model = GenerativeModel(
-      model: 'gemini-3-pro-preview',
+      model: 'gemini-3.5-flash',
       apiKey: apiKey,
     );
     final response = await model.generateContent(content);

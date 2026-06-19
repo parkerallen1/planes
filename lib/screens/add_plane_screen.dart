@@ -183,7 +183,28 @@ class _AddPlaneScreenState extends ConsumerState<AddPlaneScreen>
   @override
   Widget build(BuildContext context) {
     final isPokedex = ref.watch(themeProvider).isPokedex;
+    final settings = ref.watch(themeProvider);
     final category = ref.watch(categoryProvider).activeCategory;
+
+    Widget body = Center(
+      child: _isAnalyzing
+          ? _buildAnalyzingState(isPokedex)
+          : _buildCaptureState(isPokedex, category),
+    );
+
+    if (isPokedex) {
+      body = Stack(
+        children: [
+          body,
+          if (settings.crtScanlines)
+            Positioned.fill(
+              child: IgnorePointer(
+                child: CustomPaint(painter: AddCrtScanlinesPainter()),
+              ),
+            ),
+        ],
+      );
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -194,11 +215,7 @@ class _AddPlaneScreenState extends ConsumerState<AddPlaneScreen>
         ),
         leading: isPokedex ? _buildPokedexBackButton(context) : null,
       ),
-      body: Center(
-        child: _isAnalyzing
-            ? _buildAnalyzingState(isPokedex)
-            : _buildCaptureState(isPokedex, category),
-      ),
+      body: body,
     );
   }
 
@@ -315,9 +332,16 @@ class _AddPlaneScreenState extends ConsumerState<AddPlaneScreen>
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(
-                          color: AppThemes.pokedexBlue,
-                          width: 3,
+                          color: AppThemes.pokedexBlue.withOpacity(0.4),
+                          width: 2,
                         ),
+                      ),
+                    ),
+                  ),
+                  Positioned.fill(
+                    child: CustomPaint(
+                      painter: DetailViewfinderBracketsPainter(
+                        color: AppThemes.pokedexBlue.withOpacity(0.6),
                       ),
                     ),
                   ),
@@ -604,4 +628,117 @@ class _AddPlaneScreenState extends ConsumerState<AddPlaneScreen>
       ),
     );
   }
+}
+
+class DetailViewfinderBracketsPainter extends CustomPainter {
+  final Color color;
+  DetailViewfinderBracketsPainter({required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.5;
+
+    const length = 24.0;
+    const margin = 20.0;
+
+    // Top Left
+    canvas.drawLine(
+      const Offset(margin, margin),
+      const Offset(margin + length, margin),
+      paint,
+    );
+    canvas.drawLine(
+      const Offset(margin, margin),
+      const Offset(margin, margin + length),
+      paint,
+    );
+
+    // Top Right
+    canvas.drawLine(
+      Offset(size.width - margin, margin),
+      Offset(size.width - margin - length, margin),
+      paint,
+    );
+    canvas.drawLine(
+      Offset(size.width - margin, margin),
+      Offset(size.width - margin, margin + length),
+      paint,
+    );
+
+    // Bottom Left
+    canvas.drawLine(
+      Offset(margin, size.height - margin),
+      Offset(margin + length, size.height - margin),
+      paint,
+    );
+    canvas.drawLine(
+      Offset(margin, size.height - margin),
+      Offset(margin, size.height - margin - length),
+      paint,
+    );
+
+    // Bottom Right
+    canvas.drawLine(
+      Offset(size.width - margin, size.height - margin),
+      Offset(size.width - margin - length, size.height - margin),
+      paint,
+    );
+    canvas.drawLine(
+      Offset(size.width - margin, size.height - margin),
+      Offset(size.width - margin, size.height - margin - length),
+      paint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class AddCrtScanlinesPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    // 1. Cyber-grid pattern
+    final gridPaint = Paint()
+      ..color = Colors.white.withOpacity(0.03)
+      ..strokeWidth = 0.5;
+
+    // Horizontal lines
+    for (double y = 0; y < size.height; y += 16) {
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), gridPaint);
+    }
+    // Vertical lines
+    for (double x = 0; x < size.width; x += 16) {
+      canvas.drawLine(Offset(x, 0), Offset(x, size.height), gridPaint);
+    }
+
+    // 2. Subtle horizontal scanline strips
+    final scanlinePaint = Paint()
+      ..color = Colors.black.withOpacity(0.04)
+      ..strokeWidth = 1.0;
+
+    for (double y = 0; y < size.height; y += 4) {
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), scanlinePaint);
+    }
+
+    // 3. Curved CRT glass vignette/gradient shadow
+    final rect = Rect.fromLTWH(0, 0, size.width, size.height);
+    final vignettePaint = Paint()
+      ..shader = RadialGradient(
+        center: Alignment.center,
+        radius: 1.15,
+        colors: [
+          Colors.transparent,
+          Colors.black.withOpacity(0.22),
+        ],
+        stops: const [0.65, 1.0],
+      ).createShader(rect);
+
+    canvas.drawRect(rect, vignettePaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
