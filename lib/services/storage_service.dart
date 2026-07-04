@@ -47,9 +47,10 @@ class StorageService {
   }
 
   Future<void> deletePlane(String id) async {
-    await _deleteImageFile(_planeBox.get(id));
+    final plane = _planeBox.get(id);
+    await _deleteImageFile(plane);
     await _planeBox.delete(id);
-    sync?.pushDelete(id);
+    sync?.pushDelete(id, imagePath: plane?.imagePath);
   }
 
   Future<void> updatePlane(Plane plane) async {

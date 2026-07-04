@@ -107,7 +107,11 @@ targets are Android and iOS.
   last-write-wins on `updatedAt`, soft-delete tombstones, and a first-snapshot
   seeding pass that uploads local items the cloud has never seen. Firestore
   offline persistence queues pushes while offline. Only active when
-  `cloudEnabledProvider` is true.
+  `cloudEnabledProvider` is true. Photos: uploaded to Firebase Storage at
+  `users/{uid}/scans/<basename>` (download URL stamped on `Plane.imageUrl`);
+  other devices download missing photos into their local scans/ dir, and
+  deleting an item deletes the cloud object too. Interrupted uploads retry
+  on the next launch's seeding pass.
 - `services/image_store.dart` — permanent photo storage. Picked photos are
   copied out of the image_picker cache into `<documents>/scans/<uuid>.<ext>`
   and persisted on `Plane.imagePath` as the *relative* token
