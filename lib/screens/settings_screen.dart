@@ -267,7 +267,7 @@ class _ThemeToggleCard extends ConsumerWidget {
         const SizedBox(width: 16),
         Expanded(
           child: _ThemeCard(
-            title: 'Pokédex',
+            title: 'Retro',
             subtitle: 'Scanner mode',
             isSelected: isRetro,
             previewColors: [
