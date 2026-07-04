@@ -16,8 +16,14 @@ import 'models/plane.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Load environment variables
-  await dotenv.load(fileName: '.env.local');
+  // .env.local only matters for the local-dev Gemini key fallback; once
+  // Firebase is configured the file can be empty. (It must still exist for
+  // `flutter build` because it's declared as an asset in pubspec.yaml.)
+  try {
+    await dotenv.load(fileName: '.env.local');
+  } catch (_) {
+    // Missing/unreadable env file — fine when Firebase AI is in use.
+  }
 
   await ImageStore.init();
 

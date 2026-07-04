@@ -34,11 +34,17 @@ targets are Android and iOS.
 - Flutter, Dart SDK `^3.9.2`, Material.
 - **Riverpod 3** (`flutter_riverpod`, Notifier API) for state.
 - **Hive** for the collection database (box named `planes`).
-- **Gemini** via `google_generative_ai`, model `gemini-3.5-flash`.
-- API key: `GEMINI_API_KEY` in `.env.local` at the repo root, loaded with
-  `flutter_dotenv` and bundled as a Flutter asset. The app throws at startup
-  without it, and `flutter build` fails if the file doesn't exist — create
-  it first in fresh clones (it's gitignored).
+- **Gemini**, model `gemini-3.5-flash` (constant `GeminiService.modelName`),
+  reached through one of two backends (`services/genai_backend.dart`):
+  **Firebase AI Logic** (`firebase_ai`, App Check-attested, no key in the
+  binary) when Firebase is configured — the production path — else direct
+  `google_generative_ai` with the `.env.local` key as local-dev fallback.
+- API key (fallback path only): `GEMINI_API_KEY` in `.env.local` at the
+  repo root, loaded with `flutter_dotenv` and bundled as a Flutter asset.
+  `flutter build` fails if the file doesn't exist — create it first in
+  fresh clones (it's gitignored; may be empty once Firebase is configured).
+  NOTE: the bundled key is extractable from the APK/IPA — do NOT ship a
+  store build on the fallback path; configure Firebase first.
 - `shared_preferences` for settings and categories; `google_fonts` for retro
   fonts; `audioplayers` for synthesized retro sounds; `image_picker` for
   camera/gallery; `geolocator` + `exif` for capture location;
@@ -94,7 +100,11 @@ targets are Android and iOS.
   identification/description/tags/guesses, category-aware via
   `geminiContext` and `validTags`), `regenerateTags`, `chat`, and
   `generateCategoryProfile` (new category name → emoji/context/starter
-  tags). Responses are JSON parsed out of markdown code fences.
+  tags). Responses are JSON parsed out of markdown code fences. Talks to
+  Gemini through a `GenAiBackend`, picked in `geminiServiceProvider`.
+- `services/genai_backend.dart` — `GenAiBackend` interface +
+  `FirebaseAiBackend` (firebase_ai / AI Logic) and `GoogleAiBackend`
+  (google_generative_ai + API key) implementations.
 - `services/storage_service.dart` — Hive CRUD, tag aggregation, JSON
   export/import for backups. Deleting an item also deletes its stored photo.
   The single choke point for writes: `savePlane`/`updatePlane`/`deletePlane`

@@ -1,19 +1,28 @@
 import 'dart:convert';
 import 'dart:io';
-import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../models/plane.dart';
 import '../models/scan_category.dart';
+import 'firebase_bootstrap.dart';
+import 'genai_backend.dart';
 import 'image_store.dart';
 
 final geminiServiceProvider = Provider<GeminiService>((ref) {
-  // Load API key from .env.local file
+  // Production path: Gemini via Firebase AI Logic — no API key in the
+  // binary, requests App Check-attested.
+  if (FirebaseBootstrap.firebaseAvailable) {
+    return GeminiService(FirebaseAiBackend(model: GeminiService.modelName));
+  }
+  // Local-dev fallback: direct Gemini API with the .env.local key.
   final apiKey = dotenv.env['GEMINI_API_KEY'] ?? '';
   if (apiKey.isEmpty) {
-    throw 'GEMINI_API_KEY not found in .env.local file.';
+    throw 'No AI backend available: configure Firebase (flutterfire '
+        'configure) or put GEMINI_API_KEY in .env.local.';
   }
-  return GeminiService(apiKey: apiKey);
+  return GeminiService(
+    GoogleAiBackend(apiKey: apiKey, model: GeminiService.modelName),
+  );
 });
 
 /// AI-generated starter profile for a newly created category.
@@ -30,12 +39,11 @@ class GeneratedCategoryProfile {
 }
 
 class GeminiService {
-  final String apiKey;
-  late final GenerativeModel _model;
+  static const modelName = 'gemini-3.5-flash';
 
-  GeminiService({required this.apiKey}) {
-    _model = GenerativeModel(model: 'gemini-3.5-flash', apiKey: apiKey);
-  }
+  final GenAiBackend _backend;
+
+  GeminiService(this._backend);
 
   static String _extractJson(String? text) {
     String jsonString = text ?? '{}';
@@ -67,11 +75,11 @@ Return the response in JSON format:
 }
 ''';
 
-    final response = await _model.generateContent([Content.text(prompt)]);
+    final text = await _backend.generate(prompt);
 
     Map<String, dynamic> data = {};
     try {
-      data = jsonDecode(_extractJson(response.text));
+      data = jsonDecode(_extractJson(text));
     } catch (e) {
       print('Error parsing JSON: $e');
     }
@@ -116,10 +124,6 @@ Return the response in JSON format:
     ScanCategory? category,
     void Function(List<String> newTags)? onNewTags,
   }) async {
-    if (apiKey == 'YOUR_API_KEY') {
-      throw 'Please set your Gemini API key in lib/services/gemini_service.dart';
-    }
-
     final activeCategory = category ??
         const ScanCategory(
           id: 'planes',
@@ -140,7 +144,7 @@ Return the response in JSON format:
     final categoryName = activeCategory.name.toLowerCase();
     final validCategoryTags = activeCategory.validTags;
 
-    final prompt = TextPart('''
+    final prompt = '''
 Identify this ${activeCategory.geminiContext}.
 Location: $locStr.
 Based on the location, what might it be doing there?
@@ -168,19 +172,9 @@ Return the response in JSON format:
   "manufacturer": "Maker/Brand/Family Name",
   "tags": ["tag1", "tag2", "tag3"]
 }
-''');
+''';
 
-    final content = [
-      Content.multi([prompt, DataPart('image/jpeg', image)]),
-    ];
-
-    // Use gemini-3.5-flash as requested
-    final model = GenerativeModel(
-      model: 'gemini-3.5-flash',
-      apiKey: apiKey,
-    );
-    final response = await model.generateContent(content);
-    final text = response.text;
+    final text = await _backend.generate(prompt, imageJpeg: image);
     final jsonString = _extractJson(text);
 
     Map<String, dynamic> data = {};
@@ -251,7 +245,7 @@ Return the response in JSON format:
     final context = activeCategory?.geminiContext ?? 'aircraft or airplane';
 
     final image = await File(ImageStore.resolve(imagePath)).readAsBytes();
-    final prompt = TextPart('''
+    final prompt = '''
 Identify this $context and provide classification tags.
 Select 3-5 tags, preferring tags from this list: ${allowedTags.join(', ')}.
 If the subject genuinely doesn't fit those, you may invent up to 2 new tags — keep them short (1-2 words), generic types or classes (not specific models or brands), and consistent in style with the list.
@@ -263,17 +257,13 @@ Return the response in JSON format:
   "tags": ["tag1", "tag2"],
   "manufacturer": "Maker/Brand Name"
 }
-''');
+''';
 
-    final content = [
-      Content.multi([prompt, DataPart('image/jpeg', image)]),
-    ];
-
-    final response = await _model.generateContent(content);
+    final text = await _backend.generate(prompt, imageJpeg: image);
 
     Map<String, dynamic> data = {};
     try {
-      data = jsonDecode(_extractJson(response.text));
+      data = jsonDecode(_extractJson(text));
     } catch (e) {
       print('Error parsing JSON: $e');
       return [];
@@ -315,16 +305,6 @@ Return the response in JSON format:
     String? planeContext,
     String subject = 'item',
   }) async {
-    // Note: For multi-turn chat with images, we'd ideally use a model that supports it in chat history.
-    // For this prototype, we'll start a new chat or append to history text-only.
-    // A better approach for "chatting about a plane" is to send the image in the first turn (which we did in identifyPlane)
-    // and then continue the conversation. However, the `identifyPlane` call was a single generation, not a chat session.
-    // So we will start a new chat session here, providing the image in the first user message if the history is empty,
-    // or just text if we are continuing.
-
-    // Since we don't persist the `ChatSession` object, we have to reconstruct it or just use `generateContent` with history included manually.
-    // Using `startChat` is easier.
-
     // Failed sends can leave unanswered user turns persisted at the end of
     // the saved history; the API rejects histories that don't alternate
     // user/model roles, so drop them before starting the chat.
@@ -333,35 +313,26 @@ Return the response in JSON format:
       pastHistory.removeLast();
     }
 
-    final chat = _model.startChat(
-      history: pastHistory
-          .map((m) => Content(m.isUser ? 'user' : 'model', [TextPart(m.text)]))
-          .toList(),
-    );
-
-    // If this is the first message in this specific chat interaction (not the whole history), we might want to attach the image context again.
-    // But `history` passed here is the *past* history.
-    // If history is empty, it means we are starting the chat. We should probably include the image context.
-
     String finalMessage = message;
     if (planeContext != null && planeContext.isNotEmpty) {
       finalMessage =
           "Context: The user is asking about the $subject identified as '$planeContext'. $message";
     }
 
-    Content content;
-    if (pastHistory.isEmpty) {
-      final image = await File(ImageStore.resolve(imagePath)).readAsBytes();
-      content = Content.multi([
-        TextPart("Here is the image of the $subject we are discussing."),
-        DataPart('image/jpeg', image),
-        TextPart(finalMessage),
-      ]);
-    } else {
-      content = Content.text(finalMessage);
-    }
+    // On the first turn, attach the item's photo so the whole conversation
+    // is grounded in it; later turns are text-only on top of the history.
+    final image = pastHistory.isEmpty
+        ? await File(ImageStore.resolve(imagePath)).readAsBytes()
+        : null;
 
-    final response = await chat.sendMessage(content);
-    return response.text ?? 'I could not generate a response.';
+    final response = await _backend.chat(
+      history: pastHistory
+          .map((m) => (isUser: m.isUser, text: m.text))
+          .toList(),
+      message: finalMessage,
+      imageJpeg: image,
+      imageIntro: "Here is the image of the $subject we are discussing.",
+    );
+    return response ?? 'I could not generate a response.';
   }
 }
