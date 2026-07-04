@@ -3,8 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/plane.dart';
+import '../models/scan_category.dart';
 import '../services/gemini_service.dart';
 import '../services/storage_service.dart';
+import '../providers/category_provider.dart';
 import '../providers/theme_provider.dart';
 import '../theme/app_themes.dart';
 
@@ -953,6 +955,14 @@ class _PlaneDetailScreenState extends ConsumerState<PlaneDetailScreen> {
     );
   }
 
+  /// The category this plane was scanned under, if it still exists.
+  ScanCategory? get _category {
+    for (final c in ref.read(categoryProvider).categories) {
+      if (c.id == _plane.categoryId) return c;
+    }
+    return null;
+  }
+
   Future<void> _rerunTags() async {
     setState(() {
       _isLoadingTags = true;
@@ -960,7 +970,16 @@ class _PlaneDetailScreenState extends ConsumerState<PlaneDetailScreen> {
 
     try {
       final geminiService = ref.read(geminiServiceProvider);
-      final newTags = await geminiService.regenerateTags(_plane.imagePath);
+      final category = _category;
+      final newTags = await geminiService.regenerateTags(
+        _plane.imagePath,
+        category: category,
+        onNewTags: category == null
+            ? null
+            : (tags) => ref
+                  .read(categoryProvider.notifier)
+                  .addTagsToCategory(category.id, tags),
+      );
 
       if (mounted) {
         setState(() {
@@ -984,12 +1003,14 @@ class _PlaneDetailScreenState extends ConsumerState<PlaneDetailScreen> {
   }
 
   void _showAddTagDialog(bool isPokedex) {
+    final managedTagList = _category?.validTags ?? GeminiService.validTags;
+
     // Separate current tags into "valid/managed" and "other/custom" (e.g. Manufacturer)
     final currentManagedTags = _plane.tags
-        .where((t) => GeminiService.validTags.contains(t))
+        .where((t) => managedTagList.contains(t))
         .toSet();
     final otherTags = _plane.tags
-        .where((t) => !GeminiService.validTags.contains(t))
+        .where((t) => !managedTagList.contains(t))
         .toList();
 
     showDialog(
@@ -1003,9 +1024,9 @@ class _PlaneDetailScreenState extends ConsumerState<PlaneDetailScreen> {
                 width: double.maxFinite,
                 child: ListView.builder(
                   shrinkWrap: true,
-                  itemCount: GeminiService.validTags.length,
+                  itemCount: managedTagList.length,
                   itemBuilder: (context, index) {
-                    final tag = GeminiService.validTags[index];
+                    final tag = managedTagList[index];
                     final isSelected = currentManagedTags.contains(tag);
                     return CheckboxListTile(
                       title: Text(tag),

@@ -6,6 +6,7 @@ import '../providers/theme_provider.dart';
 import '../providers/category_provider.dart';
 import '../models/scan_category.dart';
 import '../theme/app_themes.dart';
+import '../services/gemini_service.dart';
 import '../services/sound_service.dart';
 import '../services/storage_service.dart';
 
@@ -815,6 +816,7 @@ class _CategoryManager extends ConsumerWidget {
     int? editIndex,
     ScanCategory? existing,
   ) {
+    final isNew = editIndex == null;
     final nameCtrl = TextEditingController(text: existing?.name ?? '');
     final emojiCtrl = TextEditingController(text: existing?.emoji ?? '');
     final contextCtrl =
@@ -823,116 +825,241 @@ class _CategoryManager extends ConsumerWidget {
       text: existing?.validTags.join(', ') ?? '',
     );
 
+    bool isGenerating = false;
+    String? errorText;
+
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(
-          editIndex == null ? 'Add Category' : 'Edit Category',
-          style: const TextStyle(color: Colors.white),
-        ),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setState) {
+          // Fills the tags (and emoji/context if left blank) from the
+          // category name via Gemini.
+          Future<GeneratedCategoryProfile?> generateProfile() async {
+            final name = nameCtrl.text.trim();
+            setState(() {
+              isGenerating = true;
+              errorText = null;
+            });
+            try {
+              final profile = await ref
+                  .read(geminiServiceProvider)
+                  .generateCategoryProfile(name);
+              if (!ctx.mounted) return null;
+              setState(() => isGenerating = false);
+              return profile;
+            } catch (e) {
+              if (!ctx.mounted) return null;
+              setState(() {
+                isGenerating = false;
+                errorText = 'Tag generation failed: $e';
+              });
+              return null;
+            }
+          }
+
+          Future<void> regenerateTagsField() async {
+            if (nameCtrl.text.trim().isEmpty) {
+              setState(() => errorText = 'Enter a name first.');
+              return;
+            }
+            final profile = await generateProfile();
+            if (profile == null) return;
+            setState(() {
+              tagsCtrl.text = profile.tags.join(', ');
+              if (emojiCtrl.text.trim().isEmpty) emojiCtrl.text = profile.emoji;
+              if (contextCtrl.text.trim().isEmpty) {
+                contextCtrl.text = profile.geminiContext;
+              }
+            });
+          }
+
+          Future<void> save() async {
+            final name = nameCtrl.text.trim();
+            if (name.isEmpty) {
+              setState(() => errorText = 'Name is required.');
+              return;
+            }
+
+            var emoji = emojiCtrl.text.trim();
+            var geminiContext = contextCtrl.text.trim();
+            var tags = tagsCtrl.text
+                .split(',')
+                .map((t) => t.trim())
+                .where((t) => t.isNotEmpty)
+                .toList();
+
+            // No tags typed (always the case for new categories) — generate
+            // them from the name, along with an emoji/context if blank.
+            if (tags.isEmpty) {
+              final profile = await generateProfile();
+              if (profile == null) return;
+              tags = profile.tags;
+              if (emoji.isEmpty) emoji = profile.emoji;
+              if (geminiContext.isEmpty) geminiContext = profile.geminiContext;
+            }
+            if (emoji.isEmpty) emoji = '📷';
+
+            final category = ScanCategory(
+              id: existing?.id ??
+                  name.toLowerCase().replaceAll(RegExp(r'\s+'), '_'),
+              name: name,
+              emoji: emoji,
+              geminiContext: geminiContext.isEmpty
+                  ? name.toLowerCase()
+                  : geminiContext,
+              validTags: tags,
+            );
+
+            if (editIndex == null) {
+              ref.read(categoryProvider.notifier).addCategory(category);
+            } else {
+              ref
+                  .read(categoryProvider.notifier)
+                  .updateCategory(editIndex, category);
+            }
+
+            if (ctx.mounted) Navigator.pop(ctx);
+          }
+
+          return AlertDialog(
+            title: Text(
+              isNew ? 'Add Category' : 'Edit Category',
+              style: const TextStyle(color: Colors.white),
+            ),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    flex: 2,
-                    child: TextField(
-                      controller: emojiCtrl,
-                      decoration: const InputDecoration(
-                        labelText: 'Emoji',
-                        hintText: '✈️',
+                  Row(
+                    children: [
+                      Expanded(
+                        flex: 2,
+                        child: TextField(
+                          controller: emojiCtrl,
+                          decoration: const InputDecoration(
+                            labelText: 'Emoji',
+                            hintText: '✈️',
+                          ),
+                          style: const TextStyle(
+                            fontSize: 24,
+                            color: Colors.white,
+                          ),
+                        ),
                       ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        flex: 5,
+                        child: TextField(
+                          controller: nameCtrl,
+                          decoration: const InputDecoration(
+                            labelText: 'Name',
+                            hintText: 'Planes',
+                          ),
+                          style: const TextStyle(color: Colors.white),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: contextCtrl,
+                    decoration: const InputDecoration(
+                      labelText: 'Gemini Context (optional)',
+                      hintText: 'aircraft or airplane',
+                      helperText: 'How to describe this to Gemini AI',
+                      helperStyle:
+                          TextStyle(color: Colors.white38, fontSize: 11),
+                    ),
+                    style: const TextStyle(color: Colors.white),
+                  ),
+                  const SizedBox(height: 12),
+                  if (isNew)
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.auto_awesome,
+                          size: 16,
+                          color: AppThemes.pokedexLightBlue,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Tags (and emoji, if blank) are generated '
+                            'automatically — you can edit them later.',
+                            style: TextStyle(
+                              color: Colors.white.withValues(alpha: 0.55),
+                              fontSize: 11,
+                            ),
+                          ),
+                        ),
+                      ],
+                    )
+                  else ...[
+                    TextField(
+                      controller: tagsCtrl,
+                      maxLines: 3,
+                      decoration: const InputDecoration(
+                        labelText: 'Tags',
+                        hintText: 'Fighter, Bomber, Transport/Cargo',
+                        helperText:
+                            'Comma-separated list of classification tags',
+                        helperStyle:
+                            TextStyle(color: Colors.white38, fontSize: 11),
+                      ),
+                      style: const TextStyle(color: Colors.white, fontSize: 13),
+                    ),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton.icon(
+                        onPressed: isGenerating ? null : regenerateTagsField,
+                        icon: const Icon(Icons.auto_awesome, size: 14),
+                        label: const Text(
+                          'Regenerate with AI',
+                          style: TextStyle(fontSize: 12),
+                        ),
+                      ),
+                    ),
+                  ],
+                  if (errorText != null) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      errorText!,
                       style: const TextStyle(
-                        fontSize: 24,
-                        color: Colors.white,
+                        color: AppThemes.pokedexRed,
+                        fontSize: 12,
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    flex: 5,
-                    child: TextField(
-                      controller: nameCtrl,
-                      decoration: const InputDecoration(
-                        labelText: 'Name',
-                        hintText: 'Planes',
-                      ),
-                      style: const TextStyle(color: Colors.white),
-                    ),
-                  ),
+                  ],
                 ],
               ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: contextCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'Gemini Context',
-                  hintText: 'aircraft or airplane',
-                  helperText: 'How to describe this to Gemini AI',
-                  helperStyle: TextStyle(color: Colors.white38, fontSize: 11),
-                ),
-                style: const TextStyle(color: Colors.white),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Cancel'),
               ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: tagsCtrl,
-                maxLines: 3,
-                decoration: const InputDecoration(
-                  labelText: 'Tags',
-                  hintText: 'Fighter, Bomber, Transport/Cargo',
-                  helperText: 'Comma-separated list of classification tags',
-                  helperStyle: TextStyle(color: Colors.white38, fontSize: 11),
-                ),
-                style: const TextStyle(color: Colors.white, fontSize: 13),
+              ElevatedButton(
+                onPressed: isGenerating ? null : save,
+                child: isGenerating
+                    ? const SizedBox(
+                        width: 60,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            SizedBox(
+                              width: 14,
+                              height: 14,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                          ],
+                        ),
+                      )
+                    : Text(isNew ? 'Add' : 'Save'),
               ),
             ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              final name = nameCtrl.text.trim();
-              final emoji = emojiCtrl.text.trim();
-              final geminiContext = contextCtrl.text.trim();
-              final tags = tagsCtrl.text
-                  .split(',')
-                  .map((t) => t.trim())
-                  .where((t) => t.isNotEmpty)
-                  .toList();
-
-              if (name.isEmpty || emoji.isEmpty || tags.isEmpty) return;
-
-              final category = ScanCategory(
-                id: existing?.id ??
-                    name.toLowerCase().replaceAll(RegExp(r'\s+'), '_'),
-                name: name,
-                emoji: emoji,
-                geminiContext: geminiContext.isEmpty
-                    ? name.toLowerCase()
-                    : geminiContext,
-                validTags: tags,
-              );
-
-              if (editIndex == null) {
-                ref.read(categoryProvider.notifier).addCategory(category);
-              } else {
-                ref
-                    .read(categoryProvider.notifier)
-                    .updateCategory(editIndex, category);
-              }
-
-              Navigator.pop(ctx);
-            },
-            child: Text(editIndex == null ? 'Add' : 'Save'),
-          ),
-        ],
+          );
+        },
       ),
     );
   }

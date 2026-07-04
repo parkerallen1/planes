@@ -103,6 +103,29 @@ class CategoryNotifier extends Notifier<CategoryState> {
     await _saveState();
   }
 
+  /// Appends tags the AI invented during identification to the category's
+  /// tag list, skipping ones it already has (case-insensitive).
+  Future<void> addTagsToCategory(String categoryId, List<String> newTags) async {
+    final cats = List<ScanCategory>.from(state.categories);
+    final idx = cats.indexWhere((c) => c.id == categoryId);
+    if (idx == -1) return;
+
+    final existing = cats[idx].validTags;
+    final seen = existing.map((t) => t.toLowerCase()).toSet();
+    final additions = <String>[];
+    for (final tag in newTags) {
+      final trimmed = tag.trim();
+      if (trimmed.isNotEmpty && seen.add(trimmed.toLowerCase())) {
+        additions.add(trimmed);
+      }
+    }
+    if (additions.isEmpty) return;
+
+    cats[idx] = cats[idx].copyWith(validTags: [...existing, ...additions]);
+    state = state.copyWith(categories: cats);
+    await _saveState();
+  }
+
   Future<void> removeCategory(int index) async {
     if (state.categories.length <= 1) return;
     final cats = List<ScanCategory>.from(state.categories);

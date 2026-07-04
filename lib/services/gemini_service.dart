@@ -15,12 +15,79 @@ final geminiServiceProvider = Provider<GeminiService>((ref) {
   return GeminiService(apiKey: apiKey);
 });
 
+/// AI-generated starter profile for a newly created category.
+class GeneratedCategoryProfile {
+  final String emoji;
+  final String geminiContext;
+  final List<String> tags;
+
+  GeneratedCategoryProfile({
+    required this.emoji,
+    required this.geminiContext,
+    required this.tags,
+  });
+}
+
 class GeminiService {
   final String apiKey;
   late final GenerativeModel _model;
 
   GeminiService({required this.apiKey}) {
     _model = GenerativeModel(model: 'gemini-3.5-flash', apiKey: apiKey);
+  }
+
+  static String _extractJson(String? text) {
+    String jsonString = text ?? '{}';
+    if (jsonString.contains('```json')) {
+      jsonString = jsonString.split('```json')[1].split('```')[0];
+    } else if (jsonString.contains('```')) {
+      jsonString = jsonString.split('```')[1].split('```')[0];
+    }
+    return jsonString;
+  }
+
+  /// Generates an emoji, prompt context, and a starter tag set for a new
+  /// category, so the user only has to type its name.
+  Future<GeneratedCategoryProfile> generateCategoryProfile(String name) async {
+    final prompt = '''
+I'm building a collection app where users photograph items and catalog them.
+A user just created a new category named "$name".
+
+Provide:
+1. A single emoji that best represents this category.
+2. A short noun phrase describing the subject of a photo in this category, usable in prompts like "Identify this X" (e.g. "aircraft or airplane" for Planes).
+3. 10-14 classification tags for items in this category. Tags must be short (1-2 words each) and generic — types, classes, or broad attributes rather than specific models, brands, or species (e.g. for Planes: "Fighter", "Trainer", "Stealth" — not "F-16"). They should still be specific enough to be useful for filtering within "$name". Capitalize each tag.
+
+Return the response in JSON format:
+{
+  "emoji": "✈️",
+  "geminiContext": "aircraft or airplane",
+  "tags": ["Tag One", "Tag Two"]
+}
+''';
+
+    final response = await _model.generateContent([Content.text(prompt)]);
+
+    Map<String, dynamic> data = {};
+    try {
+      data = jsonDecode(_extractJson(response.text));
+    } catch (e) {
+      print('Error parsing JSON: $e');
+    }
+
+    final tags = List<String>.from(data['tags'] ?? [])
+        .map((t) => t.trim())
+        .where((t) => t.isNotEmpty)
+        .toList();
+    if (tags.isEmpty) {
+      throw 'Could not generate tags for "$name". Please try again.';
+    }
+
+    return GeneratedCategoryProfile(
+      emoji: (data['emoji'] as String?)?.trim() ?? '',
+      geminiContext: (data['geminiContext'] as String?)?.trim() ?? '',
+      tags: tags,
+    );
   }
 
   // Default tags for planes (kept for backward compatibility)
@@ -46,6 +113,7 @@ class GeminiService {
     double? long,
     String? locationDescription, {
     ScanCategory? category,
+    void Function(List<String> newTags)? onNewTags,
   }) async {
     if (apiKey == 'YOUR_API_KEY') {
       throw 'Please set your Gemini API key in lib/services/gemini_service.dart';
@@ -81,7 +149,7 @@ Please provide:
 2. Identification tips: What specific visual features should I look for to confirm which ${categoryName} it is? Provide this as a bulleted list.
 3. A general description and activity/context guess.
 4. The maker/origin of the ${categoryName} (e.g. manufacturer, brand, species family, etc.).
-5. 3-5 classification tags. IMPORTANT: You must ONLY select tags from this exact list: ${validCategoryTags.join(', ')}. Do not use any other tags.
+5. 3-5 classification tags. Prefer tags from this list: ${validCategoryTags.join(', ')}. If the ${categoryName} genuinely doesn't fit those, you may invent up to 2 new tags — keep them short (1-2 words), generic types or classes (not specific models or brands), and consistent in style with the list.
 
 Return the response in JSON format:
 {
@@ -112,13 +180,7 @@ Return the response in JSON format:
     );
     final response = await model.generateContent(content);
     final text = response.text;
-
-    String jsonString = text ?? '{}';
-    if (jsonString.contains('```json')) {
-      jsonString = jsonString.split('```json')[1].split('```')[0];
-    } else if (jsonString.contains('```')) {
-      jsonString = jsonString.split('```')[1].split('```')[0];
-    }
+    final jsonString = _extractJson(text);
 
     Map<String, dynamic> data = {};
     try {
@@ -140,6 +202,11 @@ Return the response in JSON format:
         [];
 
     final tags = List<String>.from(data['tags'] ?? ['Plane']);
+
+    // Report any tags the model invented (before the maker is mixed in) so
+    // the caller can add them to the category's tag list.
+    _reportNewTags(tags, validCategoryTags, onNewTags);
+
     if (data['manufacturer'] != null &&
         data['manufacturer'].toString().isNotEmpty) {
       tags.insert(0, data['manufacturer']);
@@ -176,6 +243,7 @@ Return the response in JSON format:
   Future<List<String>> regenerateTags(
     String imagePath, {
     ScanCategory? category,
+    void Function(List<String> newTags)? onNewTags,
   }) async {
     final activeCategory = category;
     final allowedTags = activeCategory?.validTags ?? validTags;
@@ -184,7 +252,8 @@ Return the response in JSON format:
     final image = await File(imagePath).readAsBytes();
     final prompt = TextPart('''
 Identify this $context and provide classification tags.
-Please select 3-5 tags from this EXACT list: ${allowedTags.join(', ')}.
+Select 3-5 tags, preferring tags from this list: ${allowedTags.join(', ')}.
+If the subject genuinely doesn't fit those, you may invent up to 2 new tags — keep them short (1-2 words), generic types or classes (not specific models or brands), and consistent in style with the list.
 
 Also identify the maker/brand/manufacturer/species-family.
 
@@ -200,30 +269,42 @@ Return the response in JSON format:
     ];
 
     final response = await _model.generateContent(content);
-    final text = response.text;
-
-    String jsonString = text ?? '{}';
-    if (jsonString.contains('```json')) {
-      jsonString = jsonString.split('```json')[1].split('```')[0];
-    } else if (jsonString.contains('```')) {
-      jsonString = jsonString.split('```')[1].split('```')[0];
-    }
 
     Map<String, dynamic> data = {};
     try {
-      data = jsonDecode(jsonString);
+      data = jsonDecode(_extractJson(response.text));
     } catch (e) {
       print('Error parsing JSON: $e');
       return [];
     }
 
     final tags = List<String>.from(data['tags'] ?? []);
+    _reportNewTags(tags, allowedTags, onNewTags);
+
     if (data['manufacturer'] != null &&
         data['manufacturer'].toString().isNotEmpty) {
       tags.insert(0, data['manufacturer']);
     }
 
     return tags;
+  }
+
+  /// Invokes [onNewTags] with the tags the model returned that aren't in the
+  /// category's known tag list (case-insensitive).
+  static void _reportNewTags(
+    List<String> returnedTags,
+    List<String> knownTags,
+    void Function(List<String>)? onNewTags,
+  ) {
+    if (onNewTags == null) return;
+    final known = knownTags.map((t) => t.toLowerCase()).toSet();
+    final invented = returnedTags
+        .map((t) => t.trim())
+        .where((t) => t.isNotEmpty && !known.contains(t.toLowerCase()))
+        .toList();
+    if (invented.isNotEmpty) {
+      onNewTags(invented);
+    }
   }
 
   Future<String> chat(

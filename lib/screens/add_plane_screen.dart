@@ -151,6 +151,9 @@ class _AddPlaneScreenState extends ConsumerState<AddPlaneScreen>
         long,
         manualLocation,
         category: category,
+        onNewTags: (newTags) => ref
+            .read(categoryProvider.notifier)
+            .addTagsToCategory(category.id, newTags),
       );
 
       setState(() {
