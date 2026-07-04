@@ -144,6 +144,18 @@ legacy from the plane-spotting origin. They are invisible to users, and
 renaming the Hive box/types requires a data migration — leave them unless
 doing that migration deliberately.
 
+## TODO: turn on Firebase (pre-launch blocker)
+
+All the code shipped (see FIREBASE_SETUP.md for the full checklist); the
+app runs local-only until the Firebase console side is done manually:
+
+- [ ] Create the Firebase project + run `flutterfire configure` (commits a
+      real `lib/firebase_options.dart` over the placeholder)
+- [ ] Enable Anonymous Auth, Firestore + rules, Storage + rules, AI Logic
+- [ ] App Check: register Play Integrity / App Attest, then turn on
+      enforcement (blocks the store release until done — the `.env.local`
+      Gemini key path must not ship, the key is extractable from the binary)
+
 ## TODO: finish the Dexicon rename
 
 App was renamed Planedex → Dexicon. All code identifiers, copy, display
