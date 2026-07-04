@@ -67,6 +67,9 @@ targets are Android and iOS.
   chat history, `status` (identifying/finalized), `guesses` (alternative
   identifications with confidence), `identificationTips`, `categoryId`.
   Also `ChatMessage` and `PlaneGuess`. Hive typeIds 0–3 — don't reuse them.
+  Sync fields: `updatedAt` (last-write-wins merging; stamped by
+  StorageService on every local write) and `imageUrl` (Firebase Storage
+  download URL). Hive fields 0–15 used.
 - `models/scan_category.dart` — `ScanCategory` (id, name, emoji,
   `geminiContext` prompt phrase, `validTags`). Five defaults: Planes, Cars,
   Flowers, Trees, Birds.
@@ -94,6 +97,17 @@ targets are Android and iOS.
   tags). Responses are JSON parsed out of markdown code fences.
 - `services/storage_service.dart` — Hive CRUD, tag aggregation, JSON
   export/import for backups. Deleting an item also deletes its stored photo.
+  The single choke point for writes: `savePlane`/`updatePlane`/`deletePlane`
+  stamp `updatedAt` and push to SyncService; `applyRemotePlane`/
+  `removeLocalPlane` are the remote→local path (no stamp, no push-back).
+  Exposes the box `listenable` so the home grid refreshes on synced-in
+  changes.
+- `services/sync_service.dart` — Firestore mirror at `users/{uid}/items/{id}`
+  (doc body = `Plane.toJson()` + `deleted` flag). Realtime snapshot listener,
+  last-write-wins on `updatedAt`, soft-delete tombstones, and a first-snapshot
+  seeding pass that uploads local items the cloud has never seen. Firestore
+  offline persistence queues pushes while offline. Only active when
+  `cloudEnabledProvider` is true.
 - `services/image_store.dart` — permanent photo storage. Picked photos are
   copied out of the image_picker cache into `<documents>/scans/<uuid>.<ext>`
   and persisted on `Plane.imagePath` as the *relative* token

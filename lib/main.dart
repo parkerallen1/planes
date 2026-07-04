@@ -4,6 +4,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'services/firebase_bootstrap.dart';
 import 'services/image_store.dart';
 import 'services/storage_service.dart';
+import 'services/sync_service.dart';
 import 'screens/home_screen.dart';
 import 'screens/add_plane_screen.dart';
 import 'screens/settings_screen.dart';
@@ -25,6 +26,10 @@ void main() async {
 
   final storageService = StorageService();
   await storageService.init();
+
+  if (cloudEnabled) {
+    storageService.sync = SyncService(storageService)..start();
+  }
 
   // Temporary injection of test plane
   if (!storageService.getAllPlanes().any((p) => p.identification == 'F-35 Lightning II')) {

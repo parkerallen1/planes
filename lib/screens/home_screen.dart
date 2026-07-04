@@ -25,6 +25,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   String? _lastCategoryId;
   late AnimationController _ledController;
   late Animation<double> _ledAnimation;
+  Listenable? _boxListenable;
 
   @override
   void initState() {
@@ -38,10 +39,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       begin: 0.3,
       end: 1.0,
     ).animate(CurvedAnimation(parent: _ledController, curve: Curves.easeInOut));
+
+    // Rebuild the grid when the collection changes underneath us — cloud
+    // sync applies remote edits directly to the Hive box.
+    _boxListenable = ref.read(storageServiceProvider).listenable
+      ..addListener(_onCollectionChanged);
+  }
+
+  void _onCollectionChanged() {
+    if (mounted) setState(() {});
   }
 
   @override
   void dispose() {
+    _boxListenable?.removeListener(_onCollectionChanged);
     _ledController.dispose();
     super.dispose();
   }

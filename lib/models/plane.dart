@@ -84,6 +84,15 @@ class Plane extends HiveObject {
   @HiveField(13, defaultValue: 'planes')
   String categoryId;
 
+  /// Last local or remote modification, used for last-write-wins sync
+  /// merging. Null on records created before cloud sync existed.
+  @HiveField(14)
+  DateTime? updatedAt;
+
+  /// Firebase Storage download URL for the photo, set once uploaded.
+  @HiveField(15)
+  String? imageUrl;
+
   Plane({
     required this.id,
     required this.imagePath,
@@ -100,6 +109,8 @@ class Plane extends HiveObject {
     this.guesses = const [],
     this.identificationTips = '',
     this.categoryId = 'planes',
+    this.updatedAt,
+    this.imageUrl,
   });
 
   Map<String, dynamic> toJson() => {
@@ -116,6 +127,9 @@ class Plane extends HiveObject {
     'status': status.name,
     'guesses': guesses.map((g) => g.toJson()).toList(),
     'identificationTips': identificationTips,
+    'categoryId': categoryId,
+    'updatedAt': updatedAt?.toIso8601String(),
+    'imageUrl': imageUrl,
   };
 
   static Plane fromJson(Map<String, dynamic> json) => Plane(
@@ -139,6 +153,11 @@ class Plane extends HiveObject {
         ?.map((g) => PlaneGuess.fromJson(g as Map<String, dynamic>))
         .toList() ?? [],
     identificationTips: json['identificationTips'] as String? ?? '',
+    categoryId: json['categoryId'] as String? ?? 'planes',
+    updatedAt: json['updatedAt'] != null
+        ? DateTime.tryParse(json['updatedAt'] as String)
+        : null,
+    imageUrl: json['imageUrl'] as String?,
   );
 }
 
