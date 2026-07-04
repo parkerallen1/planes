@@ -33,6 +33,9 @@ class _PlaneDetailScreenState extends ConsumerState<PlaneDetailScreen> {
     final text = _chatController.text.trim();
     if (text.isEmpty) return;
 
+    // Snapshot the history before appending the new message: chat() expects
+    // only past turns, and sends `text` itself as the new user turn.
+    final history = List<ChatMessage>.from(_plane.chatHistory);
     setState(() {
       _isSending = true;
       _plane.chatHistory.add(
@@ -45,7 +48,7 @@ class _PlaneDetailScreenState extends ConsumerState<PlaneDetailScreen> {
     try {
       final geminiService = ref.read(geminiServiceProvider);
       final response = await geminiService.chat(
-        _plane.chatHistory,
+        history,
         text,
         _plane.imagePath,
         planeContext: _plane.identification,

@@ -211,8 +211,16 @@ Return the response in JSON format:
     // Since we don't persist the `ChatSession` object, we have to reconstruct it or just use `generateContent` with history included manually.
     // Using `startChat` is easier.
 
+    // Failed sends can leave unanswered user turns persisted at the end of
+    // the saved history; the API rejects histories that don't alternate
+    // user/model roles, so drop them before starting the chat.
+    final pastHistory = List<ChatMessage>.from(history);
+    while (pastHistory.isNotEmpty && pastHistory.last.isUser) {
+      pastHistory.removeLast();
+    }
+
     final chat = _model.startChat(
-      history: history
+      history: pastHistory
           .map((m) => Content(m.isUser ? 'user' : 'model', [TextPart(m.text)]))
           .toList(),
     );
@@ -228,7 +236,7 @@ Return the response in JSON format:
     }
 
     Content content;
-    if (history.isEmpty) {
+    if (pastHistory.isEmpty) {
       final image = await File(imagePath).readAsBytes();
       content = Content.multi([
         TextPart("Here is the image of the plane we are discussing."),
