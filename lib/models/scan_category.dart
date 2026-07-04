@@ -13,6 +13,20 @@ class ScanCategory {
     required this.validTags,
   });
 
+  /// Naive singular form of the category name, for copy like "Identify Plane"
+  /// (Planes -> Plane, Butterflies -> Butterfly, Fish -> Fish).
+  String get singularName {
+    final n = name.trim();
+    final lower = n.toLowerCase();
+    if (lower.endsWith('ies') && n.length > 3) {
+      return '${n.substring(0, n.length - 3)}y';
+    }
+    if (lower.endsWith('s') && !lower.endsWith('ss') && n.length > 1) {
+      return n.substring(0, n.length - 1);
+    }
+    return n;
+  }
+
   Map<String, dynamic> toJson() => {
     'id': id,
     'name': name,

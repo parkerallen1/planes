@@ -54,6 +54,7 @@ class _PlaneDetailScreenState extends ConsumerState<PlaneDetailScreen> {
         text,
         _plane.imagePath,
         planeContext: _plane.identification,
+        subject: _subject.toLowerCase(),
       );
 
       setState(() {
@@ -86,11 +87,11 @@ class _PlaneDetailScreenState extends ConsumerState<PlaneDetailScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(isRetro ? 'DELETE ENTRY' : 'Delete Plane'),
+        title: Text(isRetro ? 'DELETE ENTRY' : 'Delete $_subject'),
         content: Text(
           isRetro
-              ? 'Permanently remove this aircraft from your Dexicon?'
-              : 'Are you sure you want to delete this plane?',
+              ? 'Permanently remove this entry from your Dexicon?'
+              : 'Are you sure you want to delete this ${_subject.toLowerCase()}?',
         ),
         actions: [
           TextButton(
@@ -126,7 +127,7 @@ class _PlaneDetailScreenState extends ConsumerState<PlaneDetailScreen> {
       appBar: AppBar(
         title: Text(
           isIdentifying
-              ? (isRetro ? 'SCANNING...' : 'Identify Plane')
+              ? (isRetro ? 'SCANNING...' : 'Identify $_subject')
               : (isRetro
                     ? _plane.identification.toUpperCase()
                     : _plane.identification),
@@ -175,7 +176,9 @@ class _PlaneDetailScreenState extends ConsumerState<PlaneDetailScreen> {
                           const SizedBox(width: 12),
                         ],
                         Text(
-                          isRetro ? 'AIRCRAFT ANALYSIS' : 'Chat with Gemini',
+                          isRetro
+                              ? '${_subject.toUpperCase()} ANALYSIS'
+                              : 'Chat with Gemini',
                           style: Theme.of(context).textTheme.titleLarge
                               ?.copyWith(letterSpacing: isRetro ? 2 : 0),
                         ),
@@ -685,11 +688,11 @@ class _PlaneDetailScreenState extends ConsumerState<PlaneDetailScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(isRetro ? 'MANUAL ID' : 'Enter Plane Name'),
+        title: Text(isRetro ? 'MANUAL ID' : 'Enter $_subject Name'),
         content: TextField(
           controller: controller,
           decoration: InputDecoration(
-            hintText: isRetro ? 'Aircraft designation' : 'Plane Name',
+            hintText: isRetro ? 'Designation or name' : '$_subject Name',
           ),
         ),
         actions: [
@@ -963,6 +966,9 @@ class _PlaneDetailScreenState extends ConsumerState<PlaneDetailScreen> {
     return null;
   }
 
+  /// Singular label for this entry's category, e.g. "Plane", "Bird".
+  String get _subject => _category?.singularName ?? 'Item';
+
   Future<void> _rerunTags() async {
     setState(() {
       _isLoadingTags = true;
@@ -1183,9 +1189,9 @@ class _PlaneDetailScreenState extends ConsumerState<PlaneDetailScreen> {
               Expanded(
                 child: TextField(
                   controller: _chatController,
-                  decoration: const InputDecoration(
-                    hintText: 'Ask about this plane...',
-                    border: OutlineInputBorder(),
+                  decoration: InputDecoration(
+                    hintText: 'Ask about this ${_subject.toLowerCase()}...',
+                    border: const OutlineInputBorder(),
                   ),
                   enabled: !_isSending,
                 ),

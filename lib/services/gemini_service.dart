@@ -312,6 +312,7 @@ Return the response in JSON format:
     String message,
     String imagePath, {
     String? planeContext,
+    String subject = 'item',
   }) async {
     // Note: For multi-turn chat with images, we'd ideally use a model that supports it in chat history.
     // For this prototype, we'll start a new chat or append to history text-only.
@@ -344,14 +345,14 @@ Return the response in JSON format:
     String finalMessage = message;
     if (planeContext != null && planeContext.isNotEmpty) {
       finalMessage =
-          "Context: The user is asking about the plane identified as '$planeContext'. $message";
+          "Context: The user is asking about the $subject identified as '$planeContext'. $message";
     }
 
     Content content;
     if (pastHistory.isEmpty) {
       final image = await File(imagePath).readAsBytes();
       content = Content.multi([
-        TextPart("Here is the image of the plane we are discussing."),
+        TextPart("Here is the image of the $subject we are discussing."),
         DataPart('image/jpeg', image),
         TextPart(finalMessage),
       ]);

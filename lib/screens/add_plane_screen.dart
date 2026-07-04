@@ -394,8 +394,8 @@ class _AddPlaneScreenState extends ConsumerState<AddPlaneScreen>
                       ? 'LOCATION DATA'
                       : 'Location (Optional)',
                   hintText: isRetro
-                      ? 'Airport code or coordinates'
-                      : 'e.g. JFK Airport, London',
+                      ? 'Place name or coordinates'
+                      : 'e.g. Hyde Park, London',
                   prefixIcon: Icon(
                     Icons.pin_drop,
                     color: isRetro ? AppThemes.retroBlue : null,
@@ -467,19 +467,24 @@ class _AddPlaneScreenState extends ConsumerState<AddPlaneScreen>
                   ),
                 )
               : null,
-          child: Icon(
-            isRetro ? Icons.radar : Icons.airplanemode_active,
-            size: 80,
-            color: isRetro
-                ? AppThemes.retroBlue.withOpacity(0.7)
-                : Colors.grey,
+          child: Center(
+            child: isRetro
+                ? Icon(
+                    Icons.radar,
+                    size: 80,
+                    color: AppThemes.retroBlue.withOpacity(0.7),
+                  )
+                : Text(
+                    category.emoji,
+                    style: const TextStyle(fontSize: 72),
+                  ),
           ),
         ),
         const SizedBox(height: 24),
         Text(
           isRetro
               ? 'READY TO SCAN'
-              : 'Capture a ${category.name.substring(0, category.name.length - 1)}',
+              : 'Capture a ${category.singularName}',
           style: TextStyle(
             fontSize: isRetro ? 18 : 16,
             color: isRetro ? AppThemes.retroLightBlue : Colors.white70,
@@ -521,7 +526,7 @@ class _AddPlaneScreenState extends ConsumerState<AddPlaneScreen>
       label: Text(
         isRetro
             ? 'BEGIN SCAN'
-            : 'Identify ${category.name.substring(0, category.name.length - 1)}',
+            : 'Identify ${category.singularName}',
         style: TextStyle(
           letterSpacing: isRetro ? 2 : 0,
           fontWeight: FontWeight.bold,
