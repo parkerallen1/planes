@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(tr ,:*)",
+      "Bash(grep:*)",
+      "Bash(python3:*)",
+      "Bash(chmod +x:*)",
+      "Bash(osascript:*)",
+      "Bash(sleep 1:*)",
+      "Bash(open:*)",
+      "Bash(flutter pub:*)",
+      "Bash(awk '/^flutter_launcher_icons:/{flag=1} flag{print} /^[a-z]/ && !/^flutter_launcher_icons:/ && flag && NR>1{if\\($0 !~ /^flutter_launcher_icons:/\\) exit}' pubspec.yaml)"
+    ]
+  }
+}
