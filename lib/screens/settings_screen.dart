@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:share_plus/share_plus.dart';
 import '../providers/theme_provider.dart';
+import '../providers/category_provider.dart';
+import '../models/scan_category.dart';
 import '../theme/app_themes.dart';
 import '../services/sound_service.dart';
+import '../services/storage_service.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -115,6 +119,20 @@ class SettingsScreen extends ConsumerWidget {
                   ref.read(themeProvider.notifier).setBootAnimation(v),
               isPokedex: isPokedex,
             ),
+
+            const SizedBox(height: 32),
+
+            // Categories Section
+            _buildSectionHeader(context, 'Categories', isPokedex),
+            const SizedBox(height: 16),
+            _CategoryManager(isPokedex: isPokedex),
+
+            const SizedBox(height: 32),
+
+            // Data Section
+            _buildSectionHeader(context, 'Data', isPokedex),
+            const SizedBox(height: 16),
+            _ExportButton(isPokedex: isPokedex),
 
             const SizedBox(height: 32),
 
@@ -581,6 +599,489 @@ class _ToggleTile extends ConsumerWidget {
             onTap: effectiveEnabled ? () => onChanged(!value) : null,
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Category manager widget — lists all categories with add/edit/delete
+class _CategoryManager extends ConsumerWidget {
+  final bool isPokedex;
+
+  const _CategoryManager({required this.isPokedex});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(categoryProvider);
+    final categories = state.categories;
+
+    return Column(
+      children: [
+        // Category list
+        ...categories.asMap().entries.map((entry) {
+          final idx = entry.key;
+          final cat = entry.value;
+          final isActive = idx == state.activeIndex;
+
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Container(
+              decoration: BoxDecoration(
+                color: isActive
+                    ? (isPokedex
+                          ? AppThemes.pokedexCard
+                          : const Color(0xFF1E2A5A))
+                    : (isPokedex
+                          ? AppThemes.pokedexDarkGray.withValues(alpha: 0.7)
+                          : const Color(0xFF1E1E1E)),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: isActive
+                      ? (isPokedex
+                            ? AppThemes.pokedexRed
+                            : Colors.blueAccent)
+                      : (isPokedex
+                            ? AppThemes.pokedexBlue.withValues(alpha: 0.3)
+                            : Colors.white12),
+                  width: isActive ? 2 : 1,
+                ),
+                boxShadow: isActive
+                    ? [
+                        BoxShadow(
+                          color: (isPokedex
+                                  ? AppThemes.pokedexRed
+                                  : Colors.blueAccent)
+                              .withValues(alpha: 0.25),
+                          blurRadius: 8,
+                        ),
+                      ]
+                    : null,
+              ),
+              child: ListTile(
+                leading: Text(cat.emoji, style: const TextStyle(fontSize: 24)),
+                title: Text(
+                  isPokedex ? cat.name.toUpperCase() : cat.name,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: isActive ? Colors.white : Colors.white70,
+                    letterSpacing: isPokedex ? 1 : 0,
+                    fontSize: 14,
+                  ),
+                ),
+                subtitle: Text(
+                  '${cat.validTags.length} tags · ${cat.geminiContext}',
+                  style: const TextStyle(color: Colors.white38, fontSize: 11),
+                  overflow: TextOverflow.ellipsis,
+                ),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (isActive)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: isPokedex
+                              ? AppThemes.pokedexRed
+                              : Colors.blueAccent,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          isPokedex ? 'ACTIVE' : 'Active',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    const SizedBox(width: 6),
+                    IconButton(
+                      icon: Icon(
+                        Icons.edit,
+                        size: 18,
+                        color: isPokedex
+                            ? AppThemes.pokedexLightBlue
+                            : Colors.white54,
+                      ),
+                      onPressed: () =>
+                          _showEditDialog(context, ref, idx, cat),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
+                    const SizedBox(width: 4),
+                    IconButton(
+                      icon: Icon(
+                        Icons.delete_outline,
+                        size: 18,
+                        color: categories.length > 1
+                            ? (isPokedex
+                                  ? AppThemes.pokedexRed.withValues(alpha: 0.8)
+                                  : Colors.red.withValues(alpha: 0.6))
+                            : Colors.white12,
+                      ),
+                      onPressed: categories.length > 1
+                          ? () => _confirmDelete(context, ref, idx, cat)
+                          : null,
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
+                  ],
+                ),
+                onTap: () =>
+                    ref.read(categoryProvider.notifier).setActiveIndex(idx),
+              ),
+            ),
+          );
+        }),
+
+        // Add new category button
+        const SizedBox(height: 8),
+        GestureDetector(
+          onTap: () => _showAddDialog(context, ref),
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: isPokedex
+                    ? AppThemes.pokedexBlue.withValues(alpha: 0.5)
+                    : Colors.blueAccent.withValues(alpha: 0.4),
+                width: 1.5,
+              ),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.add_circle_outline,
+                  color: isPokedex
+                      ? AppThemes.pokedexLightBlue
+                      : Colors.blueAccent,
+                  size: 20,
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  isPokedex ? 'ADD NEW CATEGORY' : 'Add New Category',
+                  style: TextStyle(
+                    color: isPokedex
+                        ? AppThemes.pokedexLightBlue
+                        : Colors.blueAccent,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: isPokedex ? 1 : 0,
+                    fontSize: 13,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+
+        // Reset to defaults button
+        const SizedBox(height: 8),
+        TextButton.icon(
+          onPressed: () => _confirmReset(context, ref),
+          icon: const Icon(Icons.restore, size: 16),
+          label: Text(
+            isPokedex ? 'RESET TO DEFAULTS' : 'Reset to Defaults',
+            style: TextStyle(letterSpacing: isPokedex ? 0.5 : 0, fontSize: 12),
+          ),
+          style: TextButton.styleFrom(
+            foregroundColor: Colors.white38,
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _showAddDialog(BuildContext context, WidgetRef ref) {
+    _showCategoryDialog(context, ref, null, null);
+  }
+
+  void _showEditDialog(
+    BuildContext context,
+    WidgetRef ref,
+    int index,
+    ScanCategory category,
+  ) {
+    _showCategoryDialog(context, ref, index, category);
+  }
+
+  void _showCategoryDialog(
+    BuildContext context,
+    WidgetRef ref,
+    int? editIndex,
+    ScanCategory? existing,
+  ) {
+    final nameCtrl = TextEditingController(text: existing?.name ?? '');
+    final emojiCtrl = TextEditingController(text: existing?.emoji ?? '');
+    final contextCtrl =
+        TextEditingController(text: existing?.geminiContext ?? '');
+    final tagsCtrl = TextEditingController(
+      text: existing?.validTags.join(', ') ?? '',
+    );
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(
+          editIndex == null ? 'Add Category' : 'Edit Category',
+          style: const TextStyle(color: Colors.white),
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    flex: 2,
+                    child: TextField(
+                      controller: emojiCtrl,
+                      decoration: const InputDecoration(
+                        labelText: 'Emoji',
+                        hintText: '✈️',
+                      ),
+                      style: const TextStyle(
+                        fontSize: 24,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    flex: 5,
+                    child: TextField(
+                      controller: nameCtrl,
+                      decoration: const InputDecoration(
+                        labelText: 'Name',
+                        hintText: 'Planes',
+                      ),
+                      style: const TextStyle(color: Colors.white),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: contextCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Gemini Context',
+                  hintText: 'aircraft or airplane',
+                  helperText: 'How to describe this to Gemini AI',
+                  helperStyle: TextStyle(color: Colors.white38, fontSize: 11),
+                ),
+                style: const TextStyle(color: Colors.white),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: tagsCtrl,
+                maxLines: 3,
+                decoration: const InputDecoration(
+                  labelText: 'Tags',
+                  hintText: 'Fighter, Bomber, Transport/Cargo',
+                  helperText: 'Comma-separated list of classification tags',
+                  helperStyle: TextStyle(color: Colors.white38, fontSize: 11),
+                ),
+                style: const TextStyle(color: Colors.white, fontSize: 13),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final name = nameCtrl.text.trim();
+              final emoji = emojiCtrl.text.trim();
+              final geminiContext = contextCtrl.text.trim();
+              final tags = tagsCtrl.text
+                  .split(',')
+                  .map((t) => t.trim())
+                  .where((t) => t.isNotEmpty)
+                  .toList();
+
+              if (name.isEmpty || emoji.isEmpty || tags.isEmpty) return;
+
+              final category = ScanCategory(
+                id: existing?.id ??
+                    name.toLowerCase().replaceAll(RegExp(r'\s+'), '_'),
+                name: name,
+                emoji: emoji,
+                geminiContext: geminiContext.isEmpty
+                    ? name.toLowerCase()
+                    : geminiContext,
+                validTags: tags,
+              );
+
+              if (editIndex == null) {
+                ref.read(categoryProvider.notifier).addCategory(category);
+              } else {
+                ref
+                    .read(categoryProvider.notifier)
+                    .updateCategory(editIndex, category);
+              }
+
+              Navigator.pop(ctx);
+            },
+            child: Text(editIndex == null ? 'Add' : 'Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _confirmDelete(
+    BuildContext context,
+    WidgetRef ref,
+    int index,
+    ScanCategory category,
+  ) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text(
+          'Delete Category?',
+          style: TextStyle(color: Colors.white),
+        ),
+        content: Text(
+          'Remove "${category.name}" from your categories? '
+          'Your scanned items in this category will remain saved.',
+          style: const TextStyle(color: Colors.white70),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppThemes.pokedexRed,
+            ),
+            onPressed: () {
+              ref.read(categoryProvider.notifier).removeCategory(index);
+              Navigator.pop(ctx);
+            },
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _confirmReset(BuildContext context, WidgetRef ref) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text(
+          'Reset Categories?',
+          style: TextStyle(color: Colors.white),
+        ),
+        content: const Text(
+          'Restore all default categories (Planes, Cars, Flowers, Trees, Birds)? '
+          'Your custom categories will be removed.',
+          style: TextStyle(color: Colors.white70),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              ref.read(categoryProvider.notifier).resetToDefaults();
+              Navigator.pop(ctx);
+            },
+            child: const Text('Reset'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ExportButton extends ConsumerStatefulWidget {
+  final bool isPokedex;
+
+  const _ExportButton({required this.isPokedex});
+
+  @override
+  ConsumerState<_ExportButton> createState() => _ExportButtonState();
+}
+
+class _ExportButtonState extends ConsumerState<_ExportButton> {
+  bool _exporting = false;
+
+  Future<void> _export() async {
+    setState(() => _exporting = true);
+    try {
+      final storage = ref.read(storageServiceProvider);
+      final file = await storage.exportToJson();
+      final xFile = XFile(file.path, mimeType: 'application/json');
+      await Share.shareXFiles([xFile]);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Export failed: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _exporting = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isPokedex = widget.isPokedex;
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardTheme.color,
+        borderRadius: BorderRadius.circular(12),
+        border: isPokedex
+            ? Border.all(
+                color: AppThemes.pokedexBlue.withValues(alpha: 0.3),
+                width: 1,
+              )
+            : null,
+      ),
+      child: ListTile(
+        leading: Icon(
+          Icons.download,
+          color: isPokedex ? AppThemes.pokedexLightBlue : Colors.blueAccent,
+        ),
+        title: Text(
+          isPokedex ? 'EXPORT BACKUP' : 'Export Backup',
+          style: TextStyle(
+            fontWeight: FontWeight.w600,
+            letterSpacing: isPokedex ? 0.5 : 0,
+            fontSize: 14,
+          ),
+        ),
+        subtitle: Text(
+          'Save all sightings as JSON',
+          style: TextStyle(
+            color: Colors.white60,
+            fontSize: 12,
+            letterSpacing: isPokedex ? 0.3 : 0,
+          ),
+        ),
+        trailing: _exporting
+            ? const SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : Icon(
+                Icons.share,
+                color: isPokedex ? AppThemes.pokedexBlue : Colors.blueAccent,
+              ),
+        onTap: _exporting ? null : _export,
       ),
     );
   }

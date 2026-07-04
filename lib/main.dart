@@ -8,6 +8,7 @@ import 'screens/settings_screen.dart';
 import 'screens/boot_screen.dart';
 import 'providers/theme_provider.dart';
 import 'theme/app_themes.dart';
+import 'models/plane.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -17,6 +18,20 @@ void main() async {
 
   final storageService = StorageService();
   await storageService.init();
+
+  // Temporary injection of test plane
+  if (!storageService.getAllPlanes().any((p) => p.identification == 'F-35 Lightning II')) {
+    final testPlane = Plane(
+      id: 'test_f35_01',
+      imagePath: 'assets/images/f35.jpg',
+      timestamp: DateTime.now(),
+      identification: 'F-35 Lightning II',
+      description: 'The Lockheed Martin F-35 Lightning II is an American family of single-seat, single-engine, all-weather stealth multirole combat aircraft.',
+      status: PlaneStatus.finalized,
+      tags: ['Military', 'Stealth', 'Fighter', 'Test'],
+    );
+    await storageService.savePlane(testPlane);
+  }
 
   runApp(
     ProviderScope(

@@ -4,6 +4,7 @@ import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../models/plane.dart';
+import '../models/scan_category.dart';
 
 final geminiServiceProvider = Provider<GeminiService>((ref) {
   // Load API key from .env.local file
@@ -19,9 +20,10 @@ class GeminiService {
   late final GenerativeModel _model;
 
   GeminiService({required this.apiKey}) {
-    _model = GenerativeModel(model: 'gemini-3-pro-preview', apiKey: apiKey);
+    _model = GenerativeModel(model: 'gemini-3.5-flash', apiKey: apiKey);
   }
 
+  // Default tags for planes (kept for backward compatibility)
   static const List<String> validTags = [
     'Fighter',
     'Bomber',
@@ -42,40 +44,59 @@ class GeminiService {
     String imagePath,
     double? lat,
     double? long,
-    String? locationDescription,
-  ) async {
+    String? locationDescription, {
+    ScanCategory? category,
+  }) async {
     if (apiKey == 'YOUR_API_KEY') {
       throw 'Please set your Gemini API key in lib/services/gemini_service.dart';
     }
+
+    final activeCategory = category ??
+        const ScanCategory(
+          id: 'planes',
+          name: 'Planes',
+          emoji: '✈️',
+          geminiContext: 'aircraft or airplane',
+          validTags: [
+            'Fighter', 'Bomber', 'Transport/Cargo', 'Attack Helicopter',
+            'Utility Helicopter', 'Surveillance/AWACS', 'Tanker', 'Trainer',
+            'Drone/UAV', 'Stealth', 'Experimental', 'Vintage Warbird',
+            'Commercial/Civilian',
+          ],
+        );
+
     final image = await File(imagePath).readAsBytes();
     final locStr =
         locationDescription ?? '${lat ?? 'Unknown'}, ${long ?? 'Unknown'}';
+    final categoryName = activeCategory.name.toLowerCase();
+    final validCategoryTags = activeCategory.validTags;
+
     final prompt = TextPart('''
-Identify this plane. 
+Identify this ${activeCategory.geminiContext}.
 Location: $locStr.
-Based on the location, what might it be doing?
+Based on the location, what might it be doing there?
 
 Please provide:
-1. Top 3-4 guesses for what plane this is. For each guess, provide a name, a brief description, and a confidence score (0.0 to 1.0).
-2. Identification tips: What specific visual features should I look for to confirm which plane it is? (e.g. wing shape, engine placement, tail fin). Provide this as a bulleted list.
-3. A general description and activity guess.
-4. The manufacturer of the plane (e.g. Boeing, Airbus, Cessna).
-5. 3-5 classification tags. IMPORTANT: You must ONLY select tags from this exact list: ${validTags.join(', ')}. Do not use any other tags.
+1. Top 3-4 guesses for what ${categoryName} this is. For each guess, provide a name, a brief description, and a confidence score (0.0 to 1.0).
+2. Identification tips: What specific visual features should I look for to confirm which ${categoryName} it is? Provide this as a bulleted list.
+3. A general description and activity/context guess.
+4. The maker/origin of the ${categoryName} (e.g. manufacturer, brand, species family, etc.).
+5. 3-5 classification tags. IMPORTANT: You must ONLY select tags from this exact list: ${validCategoryTags.join(', ')}. Do not use any other tags.
 
 Return the response in JSON format:
 {
   "guesses": [
     {
-      "name": "Plane Name 1",
-      "description": "Description of this specific plane type",
+      "name": "${activeCategory.name} Name 1",
+      "description": "Description of this specific type",
       "confidence": 0.9
     },
     ...
   ],
   "identificationTips": "Look for...",
   "description": "General description",
-  "activity": "What it might be doing",
-  "manufacturer": "Manufacturer Name",
+  "activity": "What it might be doing / context",
+  "manufacturer": "Maker/Brand/Family Name",
   "tags": ["tag1", "tag2", "tag3"]
 }
 ''');
@@ -84,9 +105,9 @@ Return the response in JSON format:
       Content.multi([prompt, DataPart('image/jpeg', image)]),
     ];
 
-    // Use gemini-3-pro-preview as requested
+    // Use gemini-3.5-flash as requested
     final model = GenerativeModel(
-      model: 'gemini-3-pro-preview',
+      model: 'gemini-3.5-flash',
       apiKey: apiKey,
     );
     final response = await model.generateContent(content);
@@ -139,28 +160,38 @@ Return the response in JSON format:
       timestamp: DateTime.now(),
       latitude: lat,
       longitude: long,
-      identification: guesses.isNotEmpty ? guesses.first.name : 'Unknown Plane',
+      identification: guesses.isNotEmpty
+          ? guesses.first.name
+          : 'Unknown ${activeCategory.name}',
       description: data['description'] ?? (text ?? 'No description available'),
       activity: data['activity'] ?? 'Unknown activity',
       tags: tags,
       status: PlaneStatus.identifying,
       guesses: guesses,
       identificationTips: tips,
+      categoryId: activeCategory.id,
     );
   }
 
-  Future<List<String>> regenerateTags(String imagePath) async {
+  Future<List<String>> regenerateTags(
+    String imagePath, {
+    ScanCategory? category,
+  }) async {
+    final activeCategory = category;
+    final allowedTags = activeCategory?.validTags ?? validTags;
+    final context = activeCategory?.geminiContext ?? 'aircraft or airplane';
+
     final image = await File(imagePath).readAsBytes();
     final prompt = TextPart('''
-Identify this plane and provide classification tags.
-Please select 3-5 tags from this EXACT list: ${validTags.join(', ')}.
+Identify this $context and provide classification tags.
+Please select 3-5 tags from this EXACT list: ${allowedTags.join(', ')}.
 
-Also distinguish the MANUFACTURER of the plane (e.g. Boeing, Airbus, Cessna, Piper).
+Also identify the maker/brand/manufacturer/species-family.
 
 Return the response in JSON format:
 {
   "tags": ["tag1", "tag2"],
-  "manufacturer": "Manufacturer Name"
+  "manufacturer": "Maker/Brand Name"
 }
 ''');
 

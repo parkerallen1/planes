@@ -5,6 +5,7 @@ import '../services/storage_service.dart';
 import '../services/sound_service.dart';
 import '../models/plane.dart';
 import '../providers/theme_provider.dart';
+import '../providers/category_provider.dart';
 import '../theme/app_themes.dart';
 
 import 'plane_detail_screen.dart';
@@ -19,6 +20,7 @@ class HomeScreen extends ConsumerStatefulWidget {
 class _HomeScreenState extends ConsumerState<HomeScreen>
     with TickerProviderStateMixin {
   String? selectedTag;
+  String? _lastCategoryId;
   late AnimationController _ledController;
   late Animation<double> _ledAnimation;
 
@@ -47,9 +49,26 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     final storageService = ref.watch(storageServiceProvider);
     final settings = ref.watch(themeProvider);
     final isPokedex = settings.isPokedex;
+    final categoryState = ref.watch(categoryProvider);
+    final activeCategory = categoryState.activeCategory;
 
-    final allPlanes = storageService.getAllPlanes();
-    final allTags = storageService.getAllTags();
+    // Reset tag filter when category changes
+    if (_lastCategoryId != activeCategory.id) {
+      _lastCategoryId = activeCategory.id;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) setState(() => selectedTag = null);
+      });
+    }
+
+    final allStoredPlanes = storageService.getAllPlanes();
+    // Filter by active category
+    final allPlanes = allStoredPlanes
+        .where((p) => p.categoryId == activeCategory.id)
+        .toList();
+    final allTags = <String>{};
+    for (final p in allPlanes) {
+      allTags.addAll(p.tags);
+    }
 
     final filteredPlanes = selectedTag == null
         ? allPlanes
@@ -67,7 +86,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       appBar: isPokedex
           ? null
           : AppBar(
-              title: const Text('My Planes'),
+              title: Text(
+                '${activeCategory.emoji} My ${activeCategory.name}',
+              ),
               actions: [
                 IconButton(
                   icon: const Icon(Icons.settings),
@@ -75,12 +96,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 ),
               ],
             ),
+      floatingActionButton: _buildScanFab(context, ref, isPokedex, settings),
       body: Stack(
         children: [
           Column(
             children: [
-              // Custom Pokedex header
-              if (isPokedex)
+              // Classic Mode Category selector
+              if (!isPokedex) _buildClassicCategoryBar(context, ref),
+
+              // Pokedex header & category bar
+              if (isPokedex) ...[
                 _PokedexHeader(
                   scannedCount: allPlanes.length,
                   identifyingCount: identifyingCount,
@@ -90,6 +115,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   onSettingsTap: () =>
                       Navigator.pushNamed(context, '/settings'),
                 ),
+                _buildPokedexCategoryBar(context, ref),
+              ],
 
               // Tag Filter
               if (isPokedex) const SizedBox(height: 4),
@@ -140,7 +167,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                         itemCount: filteredPlanes.length,
                         itemBuilder: (context, index) {
                           final plane = filteredPlanes[index];
-                          return _buildPlaneCard(plane, index, settings);
+                          final planeNumber = filteredPlanes.length - index;
+                          return _buildPlaneCard(plane, planeNumber, index, settings);
                         },
                       ),
               ),
@@ -156,7 +184,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             ),
         ],
       ),
-      floatingActionButton: _buildFAB(isPokedex),
     );
 
     // Wrap with screen frame if enabled
@@ -165,6 +192,246 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     }
 
     return content;
+  }
+
+  Widget _buildClassicCategoryBar(BuildContext context, WidgetRef ref) {
+    final categoryState = ref.watch(categoryProvider);
+    return Container(
+      height: 50,
+      margin: const EdgeInsets.only(top: 8),
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        itemCount: categoryState.categories.length,
+        itemBuilder: (context, index) {
+          final cat = categoryState.categories[index];
+          final isSelected = index == categoryState.activeIndex;
+          return Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: ChoiceChip(
+              label: Text('${cat.emoji} ${cat.name}'),
+              selected: isSelected,
+              onSelected: (selected) {
+                if (selected) {
+                  ref.read(categoryProvider.notifier).setActiveIndex(index);
+                }
+              },
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildPokedexCategoryBar(BuildContext context, WidgetRef ref) {
+    final categoryState = ref.watch(categoryProvider);
+    final settings = ref.watch(themeProvider);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Cyber decoration label row
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 2),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'SYSTEM DATABANK CHANNELS',
+                style: TextStyle(
+                  fontFamily: 'Courier',
+                  fontSize: 9,
+                  fontWeight: FontWeight.bold,
+                  color: AppThemes.pokedexLightBlue.withValues(alpha: 0.6),
+                  letterSpacing: 1.5,
+                ),
+              ),
+              Row(
+                children: List.generate(
+                  4,
+                  (i) => Container(
+                    width: 6,
+                    height: 2,
+                    margin: const EdgeInsets.only(left: 3),
+                    color: AppThemes.pokedexLightBlue.withValues(alpha: 0.3 + (i * 0.15)),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        Container(
+          height: 54,
+          margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 16),
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            itemCount: categoryState.categories.length,
+            itemBuilder: (context, index) {
+              final cat = categoryState.categories[index];
+              final isSelected = index == categoryState.activeIndex;
+              return GestureDetector(
+                onTap: () {
+                  ref.read(categoryProvider.notifier).setActiveIndex(index);
+                  if (settings.soundEffects) {
+                    ref.read(soundServiceProvider).play(PokedexSound.select);
+                  }
+                },
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 250),
+                  curve: Curves.easeInOut,
+                  margin: const EdgeInsets.only(right: 8, top: 2, bottom: 2),
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? AppThemes.pokedexBlue.withValues(alpha: 0.15)
+                        : AppThemes.pokedexBlack,
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(
+                      color: isSelected
+                          ? AppThemes.pokedexLightBlue
+                          : AppThemes.pokedexBlue.withValues(alpha: 0.3),
+                      width: isSelected ? 1.8 : 1.2,
+                    ),
+                    boxShadow: isSelected
+                        ? [
+                            BoxShadow(
+                              color: AppThemes.pokedexLightBlue.withValues(alpha: 0.25),
+                              blurRadius: 8,
+                              spreadRadius: 1,
+                            ),
+                          ]
+                        : null,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Blinking neon LED indicator dot for selected channel
+                      Container(
+                        width: 6,
+                        height: 6,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: isSelected ? AppThemes.pokedexLightBlue : Colors.transparent,
+                          border: Border.all(
+                            color: isSelected ? Colors.transparent : Colors.white24,
+                            width: 1.0,
+                          ),
+                          boxShadow: isSelected
+                              ? [
+                                  BoxShadow(
+                                    color: AppThemes.pokedexLightBlue.withValues(alpha: 0.8),
+                                    blurRadius: 4,
+                                    spreadRadius: 1,
+                                  ),
+                                ]
+                              : null,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Opacity(
+                        opacity: isSelected ? 1.0 : 0.6,
+                        child: Text(
+                          cat.emoji,
+                          style: const TextStyle(
+                            fontSize: 16,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'CH.0${index + 1}',
+                            style: TextStyle(
+                              fontFamily: 'Courier',
+                              fontWeight: FontWeight.bold,
+                              fontSize: 8,
+                              color: isSelected
+                                  ? AppThemes.pokedexLightBlue.withValues(alpha: 0.8)
+                                  : Colors.white24,
+                            ),
+                          ),
+                          Text(
+                            cat.name.toUpperCase(),
+                            style: TextStyle(
+                              fontFamily: 'Courier',
+                              fontWeight: FontWeight.bold,
+                              fontSize: 11,
+                              letterSpacing: 1.2,
+                              color: isSelected ? Colors.white : Colors.white54,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget? _buildScanFab(BuildContext context, WidgetRef ref, bool isPokedex, PokedexSettings settings) {
+    if (isPokedex) {
+      return Container(
+        margin: const EdgeInsets.only(bottom: 16, right: 8),
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: AppThemes.pokedexRed.withValues(alpha: 0.6),
+              blurRadius: 15,
+              spreadRadius: 2,
+            ),
+          ],
+        ),
+        child: FloatingActionButton.large(
+          onPressed: () async {
+            if (settings.soundEffects) {
+              ref.read(soundServiceProvider).play(PokedexSound.select);
+            }
+            await Navigator.pushNamed(context, '/add');
+            setState(() {});
+          },
+          backgroundColor: AppThemes.pokedexRed,
+          foregroundColor: Colors.white,
+          shape: const CircleBorder(
+            side: BorderSide(color: Colors.white70, width: 3),
+          ),
+          child: const Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.radar, size: 28),
+              SizedBox(height: 2),
+              Text(
+                'SCAN',
+                style: TextStyle(
+                  fontSize: 9,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1.5,
+                  fontFamily: 'Courier',
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    } else {
+      return FloatingActionButton(
+        onPressed: () async {
+          await Navigator.pushNamed(context, '/add');
+          setState(() {});
+        },
+        backgroundColor: Colors.blueAccent,
+        foregroundColor: Colors.white,
+        child: const Icon(Icons.add),
+      );
+    }
   }
 
   void _playSelectSound() {
@@ -222,20 +489,27 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   }
 
   Widget _buildEmptyState(bool isPokedex) {
+    final categoryState = ref.read(categoryProvider);
+    final activeCategory = categoryState.activeCategory;
+
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            isPokedex ? Icons.radar : Icons.airplanemode_active,
-            size: 80,
-            color: isPokedex
-                ? AppThemes.pokedexBlue.withValues(alpha: 0.5)
-                : Colors.grey,
+          Text(
+            activeCategory.emoji,
+            style: TextStyle(
+              fontSize: 72,
+              color: isPokedex
+                  ? Colors.white.withValues(alpha: 0.3)
+                  : Colors.grey.withValues(alpha: 0.5),
+            ),
           ),
           const SizedBox(height: 16),
           Text(
-            isPokedex ? 'NO AIRCRAFT DETECTED' : 'No planes found. Add one!',
+            isPokedex
+                ? 'NO ${activeCategory.name.toUpperCase()} DETECTED'
+                : 'No ${activeCategory.name.toLowerCase()} found. Add one!',
             style: TextStyle(
               color: Colors.white54,
               fontSize: isPokedex ? 16 : 14,
@@ -246,7 +520,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
           if (isPokedex) ...[
             const SizedBox(height: 8),
             const Text(
-              'Tap + to begin scanning',
+              'Tap + on the cog wheel to begin scanning',
               style: TextStyle(
                 color: Colors.white38,
                 fontSize: 12,
@@ -259,7 +533,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     );
   }
 
-  Widget _buildPlaneCard(Plane plane, int index, PokedexSettings settings) {
+  Widget _buildPlaneCard(Plane plane, int planeNumber, int gridIndex, PokedexSettings settings) {
     final isIdentifying = plane.status == PlaneStatus.identifying;
     final isPokedex = settings.isPokedex;
 
@@ -299,31 +573,54 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               children: [
                 // Image with overlay
                 Expanded(
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      Image.file(
-                        File(plane.imagePath),
-                        width: double.infinity,
-                        fit: BoxFit.cover,
-                        gaplessPlayback: true,
-                        errorBuilder: (context, error, stackTrace) =>
-                            const Center(child: Icon(Icons.broken_image)),
-                      ),
-                      if (isPokedex)
-                        Container(
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.topCenter,
-                              end: Alignment.bottomCenter,
-                              colors: [
-                                Colors.transparent,
-                                AppThemes.pokedexBlack.withValues(alpha: 0.8),
-                              ],
+                  child: ClipRRect(
+                    borderRadius: const BorderRadius.vertical(top: Radius.circular(10)),
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        plane.imagePath.startsWith('assets/')
+                            ? Image.asset(
+                                plane.imagePath,
+                                width: double.infinity,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) =>
+                                    const Center(child: Icon(Icons.broken_image)),
+                              )
+                            : Image.file(
+                                File(plane.imagePath),
+                                width: double.infinity,
+                                fit: BoxFit.cover,
+                                gaplessPlayback: true,
+                                errorBuilder: (context, error, stackTrace) =>
+                                    const Center(child: Icon(Icons.broken_image)),
+                              ),
+                        if (isPokedex) ...[
+                          Container(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: [
+                                  Colors.transparent,
+                                  AppThemes.pokedexBlack.withValues(alpha: 0.8),
+                                ],
+                              ),
                             ),
                           ),
-                        ),
-                    ],
+                          Positioned.fill(
+                            child: CustomPaint(
+                              painter: ViewfinderBracketsPainter(
+                                color: isIdentifying
+                                    ? AppThemes.pokedexYellow.withValues(alpha: 0.8)
+                                    : AppThemes.pokedexBlue.withValues(alpha: 0.4),
+                              ),
+                            ),
+                          ),
+                          if (isIdentifying)
+                            const Positioned.fill(child: _ScanningOverlay()),
+                        ],
+                      ],
+                    ),
                   ),
                 ),
 
@@ -347,7 +644,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     children: [
                       if (isPokedex)
                         Text(
-                          '#${(index + 1).toString().padLeft(3, '0')}',
+                          '#${planeNumber.toString().padLeft(3, '0')}',
                           style: const TextStyle(
                             fontSize: 10,
                             color: AppThemes.pokedexBlue,
@@ -425,7 +722,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
     // Apply entry animation if enabled
     if (isPokedex && settings.entryAnimation) {
-      card = _AnimatedEntry(index: index, child: card);
+      card = _AnimatedEntry(index: gridIndex, child: card);
     }
 
     return card;
@@ -452,22 +749,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     );
   }
 
-  Widget _buildFAB(bool isPokedex) {
-    return FloatingActionButton(
-      onPressed: () async {
-        if (isPokedex && ref.read(themeProvider).soundEffects) {
-          ref.read(soundServiceProvider).play(PokedexSound.select);
-        }
-        await Navigator.pushNamed(context, '/add');
-        setState(() {});
-      },
-      backgroundColor: isPokedex ? AppThemes.pokedexRed : null,
-      child: Icon(
-        isPokedex ? Icons.camera_alt : Icons.add,
-        color: Colors.white,
-      ),
-    );
-  }
 }
 
 /// Custom Pokedex header widget with curved diagonal design
@@ -493,108 +774,165 @@ class _PokedexHeader extends StatelessWidget {
     final topPadding = MediaQuery.of(context).padding.top;
     final screenWidth = MediaQuery.of(context).size.width;
 
-    return SizedBox(
-      height: topPadding + 140,
-      child: Stack(
-        children: [
-          // Background with custom shape
-          ClipPath(
-            clipper: _PokedexHeaderClipper(),
-            child: Container(
-              decoration: BoxDecoration(
-                color: AppThemes.pokedexDarkRed,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.3),
-                    blurRadius: 8,
-                    offset: const Offset(0, 4),
+    return Column(
+      children: [
+        // Solid black status bar cap
+        Container(
+          height: topPadding,
+          color: Colors.black,
+        ),
+        SizedBox(
+          height: 110,
+          child: Stack(
+            children: [
+              // Background with custom shape
+              ClipPath(
+                clipper: _PokedexHeaderClipper(),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: AppThemes.pokedexDarkRed,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.3),
+                        blurRadius: 8,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
-            ),
-          ),
 
-          // Border line along the curved edge
-          CustomPaint(
-            painter: _PokedexHeaderBorderPainter(),
-            size: Size(screenWidth, topPadding + 140),
-          ),
+              // Border line along the curved edge
+              CustomPaint(
+                painter: _PokedexHeaderBorderPainter(),
+                size: Size(screenWidth, 110),
+              ),
 
-          // Content
-          Padding(
-            padding: EdgeInsets.only(top: topPadding + 8, left: 16, right: 16),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Left side: Row containing [Main LED Column] and [Vertical Status LEDs]
-                Row(
+              // Content
+              Padding(
+                padding: const EdgeInsets.only(top: 8, left: 16, right: 16),
+                child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Main LED Column
-                    Column(
-                      children: [
-                        _buildMainLed(),
-                        const SizedBox(height: 4),
-                        const Text(
-                          'SCANNED',
-                          style: TextStyle(
-                            fontSize: 10,
-                            color: Colors.white70,
-                            letterSpacing: 2,
-                            fontWeight: FontWeight.bold,
+                    // Glassy Blue Camera/Scanner Lens
+                    _buildMainLed(),
+                    const SizedBox(width: 14),
+
+                    // LCD Count Display & Status Indicators
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const SizedBox(height: 2),
+                          // LCD Counter screen
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF0F140C),
+                              border: Border.all(
+                                color: AppThemes.pokedexBlue.withValues(alpha: 0.4),
+                                width: 1.5,
+                              ),
+                              borderRadius: BorderRadius.circular(4),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppThemes.pokedexBlue.withValues(alpha: 0.15),
+                                  blurRadius: 4,
+                                  spreadRadius: 1,
+                                ),
+                              ],
+                            ),
+                            child: Text(
+                              'INDEXED: ${scannedCount.toString().padLeft(3, '0')}',
+                              style: TextStyle(
+                                color: AppThemes.pokedexLightBlue,
+                                fontFamily: 'Courier',
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                                letterSpacing: 1.5,
+                                shadows: [
+                                  Shadow(
+                                    color: AppThemes.pokedexLightBlue.withValues(alpha: 0.8),
+                                    blurRadius: 4,
+                                  ),
+                                ],
+                              ),
+                            ),
                           ),
+                          const SizedBox(height: 6),
+                          // Status Indicators row
+                          Row(
+                            children: [
+                              _buildHorizontalLed(
+                                color: AppThemes.pokedexRed,
+                                isActive: identifyingCount > 0,
+                                label: 'SCAN',
+                              ),
+                              const SizedBox(width: 12),
+                              _buildHorizontalLed(
+                                color: AppThemes.pokedexYellow,
+                                isActive: true,
+                                label: 'STBY',
+                              ),
+                              const SizedBox(width: 12),
+                              _buildHorizontalLed(
+                                color: AppThemes.pokedexGreen,
+                                isActive: confirmedCount > 0,
+                                label: 'SYNC',
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Right side: Logo and settings
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Row(
+                          children: [
+                            Transform.translate(
+                              offset: const Offset(0, -6),
+                              child: Image.asset(
+                                'assets/images/planedex_logo.png',
+                                height: 52,
+                                fit: BoxFit.contain,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            GestureDetector(
+                              onTap: onSettingsTap,
+                              child: Container(
+                                padding: const EdgeInsets.all(6),
+                                decoration: BoxDecoration(
+                                  color: AppThemes.pokedexBlack.withValues(alpha: 0.8),
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: AppThemes.pokedexBlue.withValues(alpha: 0.3),
+                                  ),
+                                ),
+                                child: const Icon(
+                                  Icons.settings,
+                                  size: 20,
+                                  color: AppThemes.pokedexLightBlue,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ],
-                    ),
-                    const SizedBox(width: 12),
-                    // Vertical Status LEDs
-                    Padding(
-                      padding: const EdgeInsets.only(top: 8),
-                      child: _buildStatusLeds(),
                     ),
                   ],
                 ),
-
-                const SizedBox(width: 16),
-
-                // Right side: Logo and settings
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.only(top: 8),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        // Planedex Logo
-                        Expanded(
-                          child: Align(
-                            alignment: Alignment.centerRight,
-                            child: Image.asset(
-                              'assets/images/planedex_logo.png',
-                              height: 80,
-                              fit: BoxFit.contain,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        // Settings gear icon (simplified)
-                        GestureDetector(
-                          onTap: onSettingsTap,
-                          child: const Icon(
-                            Icons.settings,
-                            size: 28,
-                            color: AppThemes.pokedexBlue,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -610,142 +948,53 @@ class _PokedexHeader extends StatelessWidget {
 
   Widget _buildMainLedContent(double glowIntensity) {
     return Container(
-      width: 70,
-      height: 70,
+      width: 58,
+      height: 58,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         color: AppThemes.pokedexBlack,
         border: Border.all(
-          color: Colors.white.withValues(alpha: 0.9),
-          width: 5,
+          color: Colors.white70,
+          width: 4,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.5),
+            color: Colors.black.withValues(alpha: 0.4),
             blurRadius: 4,
-            offset: const Offset(2, 2),
+            offset: const Offset(1.5, 1.5),
           ),
         ],
       ),
       child: Container(
-        margin: const EdgeInsets.all(5),
+        margin: const EdgeInsets.all(4),
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           gradient: RadialGradient(
             colors: [
               AppThemes.pokedexLightBlue,
               AppThemes.pokedexBlue,
-              AppThemes.pokedexBlue.withValues(alpha: 0.7),
+              AppThemes.pokedexBlue.withValues(alpha: 0.8),
             ],
-            stops: const [0.0, 0.4, 1.0],
+            stops: const [0.0, 0.45, 1.0],
           ),
           boxShadow: [
             BoxShadow(
               color: AppThemes.pokedexLightBlue.withValues(
-                alpha: glowIntensity * 0.7,
+                alpha: glowIntensity * 0.75,
               ),
-              blurRadius: 15 * glowIntensity,
-              spreadRadius: 3 * glowIntensity,
+              blurRadius: 12 * glowIntensity,
+              spreadRadius: 2 * glowIntensity,
             ),
           ],
-        ),
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(4.0),
-            child: FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Text(
-                scannedCount.toString(),
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                  height: 1.0,
-                  shadows: [Shadow(color: Colors.black54, blurRadius: 4)],
-                ),
-              ),
-            ),
-          ),
         ),
       ),
     );
   }
 
-  Widget _buildStatusLeds() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _buildSmallLed(
-              color: AppThemes.pokedexRed,
-              isActive: identifyingCount > 0,
-              tooltip: 'Scanning',
-            ),
-            const SizedBox(width: 8),
-            const Text(
-              'SCANNING',
-              style: TextStyle(
-                fontSize: 10,
-                color: Colors.white70,
-                fontWeight: FontWeight.bold,
-                letterSpacing: 1,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 6),
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _buildSmallLed(
-              color: AppThemes.pokedexYellow,
-              isActive: true,
-              tooltip: 'Ready',
-            ),
-            const SizedBox(width: 8),
-            const Text(
-              'READY',
-              style: TextStyle(
-                fontSize: 10,
-                color: Colors.white70,
-                fontWeight: FontWeight.bold,
-                letterSpacing: 1,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 6),
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _buildSmallLed(
-              color: AppThemes.pokedexGreen,
-              isActive: confirmedCount > 0,
-              tooltip: 'Confirmed',
-            ),
-            const SizedBox(width: 8),
-            const Text(
-              'CONFIRMED',
-              style: TextStyle(
-                fontSize: 10,
-                color: Colors.white70,
-                fontWeight: FontWeight.bold,
-                letterSpacing: 1,
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSmallLed({
+  Widget _buildHorizontalLed({
     required Color color,
     required bool isActive,
-    required String tooltip,
+    required String label,
   }) {
     Widget led = animatedLeds && isActive
         ? AnimatedBuilder(
@@ -755,7 +1004,23 @@ class _PokedexHeader extends StatelessWidget {
           )
         : _buildSmallLedContent(color, isActive, 1.0);
 
-    return Tooltip(message: tooltip, child: led);
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        led,
+        const SizedBox(width: 4),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 9,
+            color: isActive ? Colors.white : Colors.white30,
+            fontWeight: FontWeight.bold,
+            fontFamily: 'Courier',
+            letterSpacing: 0.5,
+          ),
+        ),
+      ],
+    );
   }
 
   Widget _buildSmallLedContent(
@@ -764,18 +1029,18 @@ class _PokedexHeader extends StatelessWidget {
     double glowIntensity,
   ) {
     return Container(
-      width: 14,
-      height: 14,
+      width: 10,
+      height: 10,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: isActive ? color : color.withValues(alpha: 0.3),
-        border: Border.all(color: Colors.black54, width: 2),
+        color: isActive ? color : color.withValues(alpha: 0.2),
+        border: Border.all(color: Colors.black45, width: 1.5),
         boxShadow: isActive
             ? [
                 BoxShadow(
-                  color: color.withValues(alpha: glowIntensity * 0.7),
-                  blurRadius: 6 * glowIntensity,
-                  spreadRadius: 1,
+                  color: color.withValues(alpha: glowIntensity * 0.8),
+                  blurRadius: 5 * glowIntensity,
+                  spreadRadius: 0.5,
                 ),
               ]
             : null,
@@ -796,17 +1061,15 @@ class _PokedexHeaderClipper extends CustomClipper<Path> {
     // Top edge
     path.lineTo(size.width, 0);
 
-    // Right edge - go down to the upper level (logo section)
-    path.lineTo(size.width, size.height - 55);
+    // Right edge - go down to the logo level
+    path.lineTo(size.width, size.height - 40);
 
-    // Diagonal line going down-left
-    path.lineTo(size.width * 0.35, size.height - 55);
+    // Diagonal transition going down-left
+    path.lineTo(size.width * 0.40, size.height - 40);
+    path.lineTo(size.width * 0.30, size.height - 12);
 
-    // The angled transition
-    path.lineTo(size.width * 0.25, size.height - 20);
-
-    // Bottom left horizontal (LED section is lower)
-    path.lineTo(0, size.height - 20);
+    // Bottom left horizontal (LED/LCD section is lower)
+    path.lineTo(0, size.height - 12);
 
     // Close back to start
     path.lineTo(0, 0);
@@ -831,24 +1094,24 @@ class _PokedexHeaderBorderPainter extends CustomPainter {
     final path = Path();
 
     // Draw the bottom edge line
-    path.moveTo(0, size.height - 20);
-    path.lineTo(size.width * 0.25, size.height - 20);
-    path.lineTo(size.width * 0.35, size.height - 55);
-    path.lineTo(size.width, size.height - 55);
+    path.moveTo(0, size.height - 12);
+    path.lineTo(size.width * 0.30, size.height - 12);
+    path.lineTo(size.width * 0.40, size.height - 40);
+    path.lineTo(size.width, size.height - 40);
 
     canvas.drawPath(path, paint);
 
-    // Inner glow line
+    // Inner highlight line
     final glowPaint = Paint()
-      ..color = AppThemes.pokedexBlue.withValues(alpha: 0.4)
+      ..color = AppThemes.pokedexBlue.withValues(alpha: 0.3)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 1;
+      ..strokeWidth = 1.0;
 
     final glowPath = Path();
-    glowPath.moveTo(0, size.height - 22);
-    glowPath.lineTo(size.width * 0.24, size.height - 22);
-    glowPath.lineTo(size.width * 0.34, size.height - 57);
-    glowPath.lineTo(size.width, size.height - 57);
+    glowPath.moveTo(0, size.height - 14);
+    glowPath.lineTo(size.width * 0.29, size.height - 14);
+    glowPath.lineTo(size.width * 0.39, size.height - 42);
+    glowPath.lineTo(size.width, size.height - 42);
 
     canvas.drawPath(glowPath, glowPaint);
   }
@@ -878,7 +1141,7 @@ class _AnimatedEntryState extends State<_AnimatedEntry>
   void initState() {
     super.initState();
     _controller = AnimationController(
-      duration: const Duration(milliseconds: 400),
+      duration: const Duration(milliseconds: 300),
       vsync: this,
     );
 
@@ -888,12 +1151,12 @@ class _AnimatedEntryState extends State<_AnimatedEntry>
     ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
 
     _slideIn = Tween<Offset>(
-      begin: const Offset(0, 0.2),
+      begin: const Offset(0, 0.15),
       end: Offset.zero,
     ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
 
     // Stagger the animation based on index
-    Future.delayed(Duration(milliseconds: widget.index * 100), () {
+    Future.delayed(Duration(milliseconds: widget.index * 60), () {
       if (mounted) _controller.forward();
     });
   }
@@ -913,34 +1176,201 @@ class _AnimatedEntryState extends State<_AnimatedEntry>
   }
 }
 
-/// CRT scanlines painter with heavier effect
+/// High-tech cyber grid scanline custom painter
 class CrtScanlinesPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
-    // Scanlines
-    final linePaint = Paint()
-      ..color = Colors.black.withValues(alpha: 0.15)
-      ..strokeWidth = 1;
+    // 1. Cyber-grid pattern: very subtle horizontal and vertical gridlines
+    final gridPaint = Paint()
+      ..color = Colors.white.withValues(alpha: 0.03)
+      ..strokeWidth = 0.5;
 
-    for (double y = 0; y < size.height; y += 3) {
-      canvas.drawLine(Offset(0, y), Offset(size.width, y), linePaint);
+    // Horizontal lines
+    for (double y = 0; y < size.height; y += 16) {
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), gridPaint);
+    }
+    // Vertical lines
+    for (double x = 0; x < size.width; x += 16) {
+      canvas.drawLine(Offset(x, 0), Offset(x, size.height), gridPaint);
     }
 
-    // Subtle color tint lines
-    final tintPaint = Paint()
-      ..color = AppThemes.pokedexBlue.withValues(alpha: 0.02)
-      ..strokeWidth = 1;
+    // 2. Subtle horizontal scanline strips
+    final scanlinePaint = Paint()
+      ..color = Colors.black.withValues(alpha: 0.04)
+      ..strokeWidth = 1.0;
 
-    for (double y = 1; y < size.height; y += 6) {
-      canvas.drawLine(Offset(0, y), Offset(size.width, y), tintPaint);
+    for (double y = 0; y < size.height; y += 4) {
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), scanlinePaint);
     }
+
+    // 3. Curved CRT glass vignette/gradient shadow
+    final rect = Rect.fromLTWH(0, 0, size.width, size.height);
+    final vignettePaint = Paint()
+      ..shader = RadialGradient(
+        center: Alignment.center,
+        radius: 1.15,
+        colors: [
+          Colors.transparent,
+          Colors.black.withValues(alpha: 0.22),
+        ],
+        stops: const [0.65, 1.0],
+      ).createShader(rect);
+
+    canvas.drawRect(rect, vignettePaint);
   }
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
-/// Pokedex device frame wrapper
+/// Viewfinder corner brackets custom painter for grid card image overlays
+class ViewfinderBracketsPainter extends CustomPainter {
+  final Color color;
+  ViewfinderBracketsPainter({required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.8;
+
+    const length = 12.0;
+    const margin = 8.0;
+
+    // Top Left
+    canvas.drawLine(
+      const Offset(margin, margin),
+      const Offset(margin + length, margin),
+      paint,
+    );
+    canvas.drawLine(
+      const Offset(margin, margin),
+      const Offset(margin, margin + length),
+      paint,
+    );
+
+    // Top Right
+    canvas.drawLine(
+      Offset(size.width - margin, margin),
+      Offset(size.width - margin - length, margin),
+      paint,
+    );
+    canvas.drawLine(
+      Offset(size.width - margin, margin),
+      Offset(size.width - margin, margin + length),
+      paint,
+    );
+
+    // Bottom Left
+    canvas.drawLine(
+      Offset(margin, size.height - margin),
+      Offset(margin + length, size.height - margin),
+      paint,
+    );
+    canvas.drawLine(
+      Offset(margin, size.height - margin),
+      Offset(margin, size.height - margin - length),
+      paint,
+    );
+
+    // Bottom Right
+    canvas.drawLine(
+      Offset(size.width - margin, size.height - margin),
+      Offset(size.width - margin - length, size.height - margin),
+      paint,
+    );
+    canvas.drawLine(
+      Offset(size.width - margin, size.height - margin),
+      Offset(size.width - margin, size.height - margin - length),
+      paint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant ViewfinderBracketsPainter oldDelegate) =>
+      oldDelegate.color != color;
+}
+
+/// Sliding laser scanner animation overlay for currently identifying cards
+class _ScanningOverlay extends StatefulWidget {
+  const _ScanningOverlay();
+
+  @override
+  State<_ScanningOverlay> createState() => _ScanningOverlayState();
+}
+
+class _ScanningOverlayState extends State<_ScanningOverlay>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _animation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 1500),
+      vsync: this,
+    )..repeat(reverse: true);
+
+    _animation = Tween<double>(begin: 0.05, end: 0.95).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final height = constraints.maxHeight;
+        return AnimatedBuilder(
+          animation: _animation,
+          builder: (context, child) {
+            return Stack(
+              children: [
+                // Glowing laser scan line
+                Positioned(
+                  top: height * _animation.value,
+                  left: 4,
+                  right: 4,
+                  child: Container(
+                    height: 3,
+                    decoration: BoxDecoration(
+                      color: AppThemes.pokedexYellow,
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppThemes.pokedexYellow.withValues(alpha: 0.8),
+                          blurRadius: 8,
+                          spreadRadius: 1.5,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                // Scanner window tint
+                Positioned.fill(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: AppThemes.pokedexYellow.withValues(alpha: 0.03),
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
+/// Pokedex device frame wrapper that respects SafeArea boundaries
 class _PokedexFrame extends StatelessWidget {
   final Widget child;
 
@@ -949,57 +1379,75 @@ class _PokedexFrame extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: BoxDecoration(
-        color: AppThemes.pokedexBlack,
-        border: Border.all(color: AppThemes.pokedexDarkRed, width: 4),
-      ),
-      child: Column(
-        children: [
-          // Main content
-          Expanded(
-            child: Container(
-              margin: const EdgeInsets.all(2),
-              decoration: BoxDecoration(
-                border: Border.all(
-                  color: AppThemes.pokedexBlue.withValues(alpha: 0.3),
-                  width: 1,
+      color: Colors.black,
+      child: SafeArea(
+        child: Container(
+          decoration: BoxDecoration(
+            color: AppThemes.pokedexBlack,
+            border: Border.all(color: AppThemes.pokedexDarkRed, width: 4),
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.6),
+                blurRadius: 10,
+                spreadRadius: 2,
+              ),
+            ],
+          ),
+          child: Column(
+            children: [
+              // Main screen viewport
+              Expanded(
+                child: Container(
+                  margin: const EdgeInsets.all(2),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: AppThemes.pokedexBlue.withValues(alpha: 0.25),
+                      width: 1,
+                    ),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: child,
+                  ),
                 ),
               ),
-              child: child,
-            ),
-          ),
-          // Bottom bezel with small LEDs
-          Container(
-            height: 12,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  AppThemes.pokedexDarkRed.withValues(alpha: 0.8),
-                  AppThemes.pokedexDarkRed,
-                  AppThemes.pokedexDarkRed.withValues(alpha: 0.8),
-                ],
+              // Bottom hardware bar with bezel LEDs
+              Container(
+                height: 16,
+                decoration: BoxDecoration(
+                  borderRadius: const BorderRadius.vertical(bottom: Radius.circular(11)),
+                  gradient: LinearGradient(
+                    colors: [
+                      AppThemes.pokedexDarkRed.withValues(alpha: 0.8),
+                      AppThemes.pokedexDarkRed,
+                      AppThemes.pokedexDarkRed.withValues(alpha: 0.8),
+                    ],
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    _buildBezelLed(Colors.white38),
+                    const SizedBox(width: 12),
+                    _buildBezelLed(Colors.white38),
+                    const SizedBox(width: 12),
+                    _buildBezelLed(Colors.white38),
+                  ],
+                ),
               ),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                _buildBezelLed(Colors.white54),
-                const SizedBox(width: 12),
-                _buildBezelLed(Colors.white54),
-                const SizedBox(width: 12),
-                _buildBezelLed(Colors.white54),
-              ],
-            ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
 
   Widget _buildBezelLed(Color color) {
     return Container(
-      width: 6,
-      height: 6,
+      width: 5,
+      height: 5,
       decoration: BoxDecoration(color: color, shape: BoxShape.circle),
     );
   }

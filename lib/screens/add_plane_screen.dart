@@ -6,6 +6,7 @@ import '../services/gemini_service.dart';
 import '../services/location_service.dart';
 import '../services/storage_service.dart';
 import '../providers/theme_provider.dart';
+import '../providers/category_provider.dart';
 import '../theme/app_themes.dart';
 import 'plane_detail_screen.dart';
 
@@ -112,6 +113,7 @@ class _AddPlaneScreenState extends ConsumerState<AddPlaneScreen>
     if (_image == null) return;
 
     final isPokedex = ref.read(themeProvider).isPokedex;
+    final category = ref.read(categoryProvider).activeCategory;
 
     setState(() {
       _isAnalyzing = true;
@@ -148,6 +150,7 @@ class _AddPlaneScreenState extends ConsumerState<AddPlaneScreen>
         lat,
         long,
         manualLocation,
+        category: category,
       );
 
       setState(() {
@@ -180,17 +183,39 @@ class _AddPlaneScreenState extends ConsumerState<AddPlaneScreen>
   @override
   Widget build(BuildContext context) {
     final isPokedex = ref.watch(themeProvider).isPokedex;
+    final settings = ref.watch(themeProvider);
+    final category = ref.watch(categoryProvider).activeCategory;
+
+    Widget body = Center(
+      child: _isAnalyzing
+          ? _buildAnalyzingState(isPokedex)
+          : _buildCaptureState(isPokedex, category),
+    );
+
+    if (isPokedex) {
+      body = Stack(
+        children: [
+          body,
+          if (settings.crtScanlines)
+            Positioned.fill(
+              child: IgnorePointer(
+                child: CustomPaint(painter: AddCrtScanlinesPainter()),
+              ),
+            ),
+        ],
+      );
+    }
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(isPokedex ? 'SCAN AIRCRAFT' : 'Add Plane'),
+        title: Text(
+          isPokedex
+              ? 'SCAN ${category.name.toUpperCase()}'
+              : 'Add ${category.name}',
+        ),
         leading: isPokedex ? _buildPokedexBackButton(context) : null,
       ),
-      body: Center(
-        child: _isAnalyzing
-            ? _buildAnalyzingState(isPokedex)
-            : _buildCaptureState(isPokedex),
-      ),
+      body: body,
     );
   }
 
@@ -288,7 +313,7 @@ class _AddPlaneScreenState extends ConsumerState<AddPlaneScreen>
     );
   }
 
-  Widget _buildCaptureState(bool isPokedex) {
+  Widget _buildCaptureState(bool isPokedex, var category) {
     return SingleChildScrollView(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -307,9 +332,16 @@ class _AddPlaneScreenState extends ConsumerState<AddPlaneScreen>
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(
-                          color: AppThemes.pokedexBlue,
-                          width: 3,
+                          color: AppThemes.pokedexBlue.withOpacity(0.4),
+                          width: 2,
                         ),
+                      ),
+                    ),
+                  ),
+                  Positioned.fill(
+                    child: CustomPaint(
+                      painter: DetailViewfinderBracketsPainter(
+                        color: AppThemes.pokedexBlue.withOpacity(0.6),
                       ),
                     ),
                   ),
@@ -372,10 +404,10 @@ class _AddPlaneScreenState extends ConsumerState<AddPlaneScreen>
             const SizedBox(height: 24),
 
             // Analyze button
-            _buildAnalyzeButton(isPokedex),
+            _buildAnalyzeButton(isPokedex, category),
             const SizedBox(height: 24),
           ] else
-            _buildEmptyState(isPokedex),
+            _buildEmptyState(isPokedex, category),
 
           if (_statusMessage != null)
             Padding(
@@ -416,7 +448,7 @@ class _AddPlaneScreenState extends ConsumerState<AddPlaneScreen>
     );
   }
 
-  Widget _buildEmptyState(bool isPokedex) {
+  Widget _buildEmptyState(bool isPokedex, var category) {
     return Column(
       children: [
         Container(
@@ -442,7 +474,9 @@ class _AddPlaneScreenState extends ConsumerState<AddPlaneScreen>
         ),
         const SizedBox(height: 24),
         Text(
-          isPokedex ? 'READY TO SCAN' : 'Capture an Aircraft',
+          isPokedex
+              ? 'READY TO SCAN'
+              : 'Capture a ${category.name.substring(0, category.name.length - 1)}',
           style: TextStyle(
             fontSize: isPokedex ? 18 : 16,
             color: isPokedex ? AppThemes.pokedexLightBlue : Colors.white70,
@@ -466,7 +500,7 @@ class _AddPlaneScreenState extends ConsumerState<AddPlaneScreen>
     );
   }
 
-  Widget _buildAnalyzeButton(bool isPokedex) {
+  Widget _buildAnalyzeButton(bool isPokedex, var category) {
     return ElevatedButton.icon(
       onPressed: _analyzeImage,
       style: ElevatedButton.styleFrom(
@@ -482,7 +516,9 @@ class _AddPlaneScreenState extends ConsumerState<AddPlaneScreen>
       ),
       icon: Icon(isPokedex ? Icons.radar : Icons.auto_awesome),
       label: Text(
-        isPokedex ? 'BEGIN SCAN' : 'Identify Plane',
+        isPokedex
+            ? 'BEGIN SCAN'
+            : 'Identify ${category.name.substring(0, category.name.length - 1)}',
         style: TextStyle(
           letterSpacing: isPokedex ? 2 : 0,
           fontWeight: FontWeight.bold,
@@ -592,4 +628,117 @@ class _AddPlaneScreenState extends ConsumerState<AddPlaneScreen>
       ),
     );
   }
+}
+
+class DetailViewfinderBracketsPainter extends CustomPainter {
+  final Color color;
+  DetailViewfinderBracketsPainter({required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.5;
+
+    const length = 24.0;
+    const margin = 20.0;
+
+    // Top Left
+    canvas.drawLine(
+      const Offset(margin, margin),
+      const Offset(margin + length, margin),
+      paint,
+    );
+    canvas.drawLine(
+      const Offset(margin, margin),
+      const Offset(margin, margin + length),
+      paint,
+    );
+
+    // Top Right
+    canvas.drawLine(
+      Offset(size.width - margin, margin),
+      Offset(size.width - margin - length, margin),
+      paint,
+    );
+    canvas.drawLine(
+      Offset(size.width - margin, margin),
+      Offset(size.width - margin, margin + length),
+      paint,
+    );
+
+    // Bottom Left
+    canvas.drawLine(
+      Offset(margin, size.height - margin),
+      Offset(margin + length, size.height - margin),
+      paint,
+    );
+    canvas.drawLine(
+      Offset(margin, size.height - margin),
+      Offset(margin, size.height - margin - length),
+      paint,
+    );
+
+    // Bottom Right
+    canvas.drawLine(
+      Offset(size.width - margin, size.height - margin),
+      Offset(size.width - margin - length, size.height - margin),
+      paint,
+    );
+    canvas.drawLine(
+      Offset(size.width - margin, size.height - margin),
+      Offset(size.width - margin, size.height - margin - length),
+      paint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class AddCrtScanlinesPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    // 1. Cyber-grid pattern
+    final gridPaint = Paint()
+      ..color = Colors.white.withOpacity(0.03)
+      ..strokeWidth = 0.5;
+
+    // Horizontal lines
+    for (double y = 0; y < size.height; y += 16) {
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), gridPaint);
+    }
+    // Vertical lines
+    for (double x = 0; x < size.width; x += 16) {
+      canvas.drawLine(Offset(x, 0), Offset(x, size.height), gridPaint);
+    }
+
+    // 2. Subtle horizontal scanline strips
+    final scanlinePaint = Paint()
+      ..color = Colors.black.withOpacity(0.04)
+      ..strokeWidth = 1.0;
+
+    for (double y = 0; y < size.height; y += 4) {
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), scanlinePaint);
+    }
+
+    // 3. Curved CRT glass vignette/gradient shadow
+    final rect = Rect.fromLTWH(0, 0, size.width, size.height);
+    final vignettePaint = Paint()
+      ..shader = RadialGradient(
+        center: Alignment.center,
+        radius: 1.15,
+        colors: [
+          Colors.transparent,
+          Colors.black.withOpacity(0.22),
+        ],
+        stops: const [0.65, 1.0],
+      ).createShader(rect);
+
+    canvas.drawRect(rect, vignettePaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
