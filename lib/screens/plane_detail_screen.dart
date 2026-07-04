@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../models/plane.dart';
 import '../models/scan_category.dart';
 import '../services/gemini_service.dart';
+import '../services/image_store.dart';
 import '../services/storage_service.dart';
 import '../providers/category_provider.dart';
 import '../providers/theme_provider.dart';
@@ -241,7 +242,7 @@ class _PlaneDetailScreenState extends ConsumerState<PlaneDetailScreen> {
                                     fit: BoxFit.contain,
                                   )
                                 : Image.file(
-                                    File(_plane.imagePath),
+                                    File(ImageStore.resolve(_plane.imagePath)),
                                     fit: BoxFit.contain,
                                   ),
                           ),
@@ -262,7 +263,7 @@ class _PlaneDetailScreenState extends ConsumerState<PlaneDetailScreen> {
                       fit: BoxFit.cover,
                     )
                   : Image.file(
-                      File(_plane.imagePath),
+                      File(ImageStore.resolve(_plane.imagePath)),
                       width: double.infinity,
                       height: double.infinity,
                       fit: BoxFit.cover,

@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../services/image_store.dart';
 import '../services/storage_service.dart';
 import '../services/sound_service.dart';
 import '../models/plane.dart';
@@ -588,7 +589,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                     const Center(child: Icon(Icons.broken_image)),
                               )
                             : Image.file(
-                                File(plane.imagePath),
+                                File(ImageStore.resolve(plane.imagePath)),
                                 width: double.infinity,
                                 fit: BoxFit.cover,
                                 gaplessPlayback: true,

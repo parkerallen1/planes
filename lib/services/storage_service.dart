@@ -4,6 +4,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 import '../models/plane.dart';
+import 'image_store.dart';
 
 final storageServiceProvider = Provider<StorageService>((ref) {
   throw UnimplementedError('StorageService not initialized');
@@ -31,6 +32,13 @@ class StorageService {
   }
 
   Future<void> deletePlane(String id) async {
+    final plane = _planeBox.get(id);
+    if (plane != null && !plane.imagePath.startsWith('assets/')) {
+      final imageFile = File(ImageStore.resolve(plane.imagePath));
+      if (await imageFile.exists()) {
+        await imageFile.delete();
+      }
+    }
     await _planeBox.delete(id);
   }
 

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import '../services/gemini_service.dart';
+import '../services/image_store.dart';
 import '../services/location_service.dart';
 import '../services/storage_service.dart';
 import '../providers/theme_provider.dart';
@@ -22,6 +23,7 @@ class AddPlaneScreen extends ConsumerStatefulWidget {
 class _AddPlaneScreenState extends ConsumerState<AddPlaneScreen>
     with SingleTickerProviderStateMixin {
   File? _image;
+  String? _storedImagePath;
   bool _isAnalyzing = false;
   String? _statusMessage;
   final TextEditingController _locationController = TextEditingController();
@@ -58,8 +60,12 @@ class _AddPlaneScreenState extends ConsumerState<AddPlaneScreen>
     final pickedFile = await picker.pickImage(source: source);
 
     if (pickedFile != null) {
-      final file = File(pickedFile.path);
+      // Copy out of the picker's purgeable cache into permanent app storage;
+      // the relative token is what gets persisted on the item.
+      final storedPath = await ImageStore.importImage(File(pickedFile.path));
+      final file = File(ImageStore.resolve(storedPath));
       setState(() {
+        _storedImagePath = storedPath;
         _image = file;
         _statusMessage = null;
         _locationController.clear();
@@ -146,7 +152,7 @@ class _AddPlaneScreenState extends ConsumerState<AddPlaneScreen>
 
       final geminiService = ref.read(geminiServiceProvider);
       final plane = await geminiService.identifyPlane(
-        _image!.path,
+        _storedImagePath!,
         lat,
         long,
         manualLocation,

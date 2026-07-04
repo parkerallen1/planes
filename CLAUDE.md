@@ -86,7 +86,14 @@ targets are Android and iOS.
   `generateCategoryProfile` (new category name → emoji/context/starter
   tags). Responses are JSON parsed out of markdown code fences.
 - `services/storage_service.dart` — Hive CRUD, tag aggregation, JSON
-  export/import for backups.
+  export/import for backups. Deleting an item also deletes its stored photo.
+- `services/image_store.dart` — permanent photo storage. Picked photos are
+  copied out of the image_picker cache into `<documents>/scans/<uuid>.<ext>`
+  and persisted on `Plane.imagePath` as the *relative* token
+  (`scans/<uuid>.jpg`), which survives iOS container moves and is portable
+  across devices. Anywhere a `File` is built from `plane.imagePath`, wrap it
+  in `ImageStore.resolve()` (handles tokens, `assets/` paths, and legacy
+  absolute paths).
 - `services/location_service.dart`, `services/sound_service.dart`.
 - `theme/app_themes.dart` — classic and retro `ThemeData`.
 - `widgets/dexicon_logo.dart`.

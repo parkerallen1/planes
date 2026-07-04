@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../models/plane.dart';
 import '../models/scan_category.dart';
+import 'image_store.dart';
 
 final geminiServiceProvider = Provider<GeminiService>((ref) {
   // Load API key from .env.local file
@@ -133,7 +134,7 @@ Return the response in JSON format:
           ],
         );
 
-    final image = await File(imagePath).readAsBytes();
+    final image = await File(ImageStore.resolve(imagePath)).readAsBytes();
     final locStr =
         locationDescription ?? '${lat ?? 'Unknown'}, ${long ?? 'Unknown'}';
     final categoryName = activeCategory.name.toLowerCase();
@@ -249,7 +250,7 @@ Return the response in JSON format:
     final allowedTags = activeCategory?.validTags ?? validTags;
     final context = activeCategory?.geminiContext ?? 'aircraft or airplane';
 
-    final image = await File(imagePath).readAsBytes();
+    final image = await File(ImageStore.resolve(imagePath)).readAsBytes();
     final prompt = TextPart('''
 Identify this $context and provide classification tags.
 Select 3-5 tags, preferring tags from this list: ${allowedTags.join(', ')}.
@@ -350,7 +351,7 @@ Return the response in JSON format:
 
     Content content;
     if (pastHistory.isEmpty) {
-      final image = await File(imagePath).readAsBytes();
+      final image = await File(ImageStore.resolve(imagePath)).readAsBytes();
       content = Content.multi([
         TextPart("Here is the image of the $subject we are discussing."),
         DataPart('image/jpeg', image),
