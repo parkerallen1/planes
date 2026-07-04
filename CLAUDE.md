@@ -43,6 +43,13 @@ targets are Android and iOS.
   fonts; `audioplayers` for synthesized retro sounds; `image_picker` for
   camera/gallery; `geolocator` + `exif` for capture location;
   `share_plus` for exporting backups.
+- **Firebase** (optional, off until configured): `firebase_core`,
+  `firebase_auth` (anonymous), `cloud_firestore`, `firebase_storage`,
+  `firebase_app_check`, `firebase_ai`. `lib/firebase_options.dart` is a
+  placeholder that throws until `flutterfire configure` replaces it —
+  `FirebaseBootstrap.init()` catches that and the app runs local-only.
+  Setup steps live in `FIREBASE_SETUP.md`. Firebase forces Android
+  minSdk 23 and iOS 15 (set in gradle/Podfile/pbxproj).
 - **No codegen wired up**: `build_runner`/`hive_generator` were removed due
   to a version conflict with Riverpod. `lib/models/plane.g.dart` is checked
   in and hand-maintained — if you add/change Hive fields, edit the adapter
@@ -94,6 +101,9 @@ targets are Android and iOS.
   across devices. Anywhere a `File` is built from `plane.imagePath`, wrap it
   in `ImageStore.resolve()` (handles tokens, `assets/` paths, and legacy
   absolute paths).
+- `services/firebase_bootstrap.dart` — Firebase init + App Check (debug
+  providers in debug builds, Play Integrity/App Attest in release) +
+  anonymous sign-in. Exposes `cloudEnabledProvider` (overridden in `main`).
 - `services/location_service.dart`, `services/sound_service.dart`.
 - `theme/app_themes.dart` — classic and retro `ThemeData`.
 - `widgets/dexicon_logo.dart`.

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'services/firebase_bootstrap.dart';
 import 'services/image_store.dart';
 import 'services/storage_service.dart';
 import 'screens/home_screen.dart';
@@ -18,6 +19,9 @@ void main() async {
   await dotenv.load(fileName: '.env.local');
 
   await ImageStore.init();
+
+  // No-op (returns false) until `flutterfire configure` has been run.
+  final cloudEnabled = await FirebaseBootstrap.init();
 
   final storageService = StorageService();
   await storageService.init();
@@ -38,7 +42,10 @@ void main() async {
 
   runApp(
     ProviderScope(
-      overrides: [storageServiceProvider.overrideWithValue(storageService)],
+      overrides: [
+        storageServiceProvider.overrideWithValue(storageService),
+        cloudEnabledProvider.overrideWithValue(cloudEnabled),
+      ],
       child: const DexiconApp(),
     ),
   );
