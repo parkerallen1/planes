@@ -89,13 +89,13 @@ BEGIN
     BEGIN
         BLOCK "040904e4"
         BEGIN
-            VALUE "CompanyName", "com.parkerallen" "\0"
-            VALUE "FileDescription", "plane_tracker" "\0"
+            VALUE "CompanyName", "Driftwood" "\0"
+            VALUE "FileDescription", "Dexicon" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "plane_tracker" "\0"
-            VALUE "LegalCopyright", "Copyright (C) 2025 com.parkerallen. All rights reserved." "\0"
-            VALUE "OriginalFilename", "plane_tracker.exe" "\0"
-            VALUE "ProductName", "plane_tracker" "\0"
+            VALUE "InternalName", "dexicon" "\0"
+            VALUE "LegalCopyright", "Copyright (C) 2025 Driftwood. All rights reserved." "\0"
+            VALUE "OriginalFilename", "dexicon.exe" "\0"
+            VALUE "ProductName", "Dexicon" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

@@ -1,4 +1,4 @@
-package com.parkerallen.plane_tracker
+package com.driftwood.dexicon
 
 import io.flutter.embedding.android.FlutterActivity
 

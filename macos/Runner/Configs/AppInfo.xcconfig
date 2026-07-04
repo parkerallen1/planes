@@ -8,7 +8,7 @@
 PRODUCT_NAME = Dexicon
 
 // The application's bundle identifier
-PRODUCT_BUNDLE_IDENTIFIER = com.parkerallen.planeTracker
+PRODUCT_BUNDLE_IDENTIFIER = com.driftwood.dexicon
 
 // The copyright displayed in application information
-PRODUCT_COPYRIGHT = Copyright © 2025 com.parkerallen. All rights reserved.
+PRODUCT_COPYRIGHT = Copyright © 2025 Driftwood. All rights reserved.
