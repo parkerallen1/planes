@@ -7,6 +7,7 @@ import '../models/plane.dart';
 import '../providers/theme_provider.dart';
 import '../providers/category_provider.dart';
 import '../theme/app_themes.dart';
+import '../widgets/dexicon_logo.dart';
 
 import 'plane_detail_screen.dart';
 
@@ -48,7 +49,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   Widget build(BuildContext context) {
     final storageService = ref.watch(storageServiceProvider);
     final settings = ref.watch(themeProvider);
-    final isPokedex = settings.isPokedex;
+    final isRetro = settings.isRetro;
     final categoryState = ref.watch(categoryProvider);
     final activeCategory = categoryState.activeCategory;
 
@@ -82,8 +83,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         .length;
 
     Widget content = Scaffold(
-      // No AppBar for Pokedex mode - we use custom header
-      appBar: isPokedex
+      // No AppBar for Retro mode - we use custom header
+      appBar: isRetro
           ? null
           : AppBar(
               title: Text(
@@ -96,17 +97,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 ),
               ],
             ),
-      floatingActionButton: _buildScanFab(context, ref, isPokedex, settings),
+      floatingActionButton: _buildScanFab(context, ref, isRetro, settings),
       body: Stack(
         children: [
           Column(
             children: [
               // Classic Mode Category selector
-              if (!isPokedex) _buildClassicCategoryBar(context, ref),
+              if (!isRetro) _buildClassicCategoryBar(context, ref),
 
-              // Pokedex header & category bar
-              if (isPokedex) ...[
-                _PokedexHeader(
+              // Retro header & category bar
+              if (isRetro) ...[
+                _RetroHeader(
                   scannedCount: allPlanes.length,
                   identifyingCount: identifyingCount,
                   confirmedCount: confirmedCount,
@@ -115,11 +116,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   onSettingsTap: () =>
                       Navigator.pushNamed(context, '/settings'),
                 ),
-                _buildPokedexCategoryBar(context, ref),
+                _buildRetroCategoryBar(context, ref),
               ],
 
               // Tag Filter
-              if (isPokedex) const SizedBox(height: 4),
+              if (isRetro) const SizedBox(height: 4),
               if (allTags.isNotEmpty)
                 SizedBox(
                   height: 60,
@@ -133,7 +134,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                       _buildFilterChip('All', selectedTag == null, () {
                         setState(() => selectedTag = null);
                         _playSelectSound();
-                      }, isPokedex),
+                      }, isRetro),
                       const SizedBox(width: 8),
                       ...allTags.map(
                         (tag) => Padding(
@@ -144,7 +145,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                   selectedTag = selectedTag == tag ? null : tag,
                             );
                             _playSelectSound();
-                          }, isPokedex),
+                          }, isRetro),
                         ),
                       ),
                     ],
@@ -154,7 +155,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               // Plane List
               Expanded(
                 child: filteredPlanes.isEmpty
-                    ? _buildEmptyState(isPokedex)
+                    ? _buildEmptyState(isRetro)
                     : GridView.builder(
                         padding: const EdgeInsets.all(16),
                         gridDelegate:
@@ -176,7 +177,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
           ),
 
           // CRT Scanlines overlay
-          if (isPokedex && settings.crtScanlines)
+          if (isRetro && settings.crtScanlines)
             Positioned.fill(
               child: IgnorePointer(
                 child: CustomPaint(painter: CrtScanlinesPainter()),
@@ -187,8 +188,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     );
 
     // Wrap with screen frame if enabled
-    if (isPokedex && settings.screenFrame) {
-      content = _PokedexFrame(child: content);
+    if (isRetro && settings.screenFrame) {
+      content = _RetroFrame(child: content);
     }
 
     return content;
@@ -223,7 +224,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     );
   }
 
-  Widget _buildPokedexCategoryBar(BuildContext context, WidgetRef ref) {
+  Widget _buildRetroCategoryBar(BuildContext context, WidgetRef ref) {
     final categoryState = ref.watch(categoryProvider);
     final settings = ref.watch(themeProvider);
 
@@ -242,7 +243,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   fontFamily: 'Courier',
                   fontSize: 9,
                   fontWeight: FontWeight.bold,
-                  color: AppThemes.pokedexLightBlue.withValues(alpha: 0.6),
+                  color: AppThemes.retroLightBlue.withValues(alpha: 0.6),
                   letterSpacing: 1.5,
                 ),
               ),
@@ -253,7 +254,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     width: 6,
                     height: 2,
                     margin: const EdgeInsets.only(left: 3),
-                    color: AppThemes.pokedexLightBlue.withValues(alpha: 0.3 + (i * 0.15)),
+                    color: AppThemes.retroLightBlue.withValues(alpha: 0.3 + (i * 0.15)),
                   ),
                 ),
               ),
@@ -273,7 +274,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 onTap: () {
                   ref.read(categoryProvider.notifier).setActiveIndex(index);
                   if (settings.soundEffects) {
-                    ref.read(soundServiceProvider).play(PokedexSound.select);
+                    ref.read(soundServiceProvider).play(RetroSound.select);
                   }
                 },
                 child: AnimatedContainer(
@@ -283,19 +284,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   padding: const EdgeInsets.symmetric(horizontal: 14),
                   decoration: BoxDecoration(
                     color: isSelected
-                        ? AppThemes.pokedexBlue.withValues(alpha: 0.15)
-                        : AppThemes.pokedexBlack,
+                        ? AppThemes.retroBlue.withValues(alpha: 0.15)
+                        : AppThemes.retroBlack,
                     borderRadius: BorderRadius.circular(6),
                     border: Border.all(
                       color: isSelected
-                          ? AppThemes.pokedexLightBlue
-                          : AppThemes.pokedexBlue.withValues(alpha: 0.3),
+                          ? AppThemes.retroLightBlue
+                          : AppThemes.retroBlue.withValues(alpha: 0.3),
                       width: isSelected ? 1.8 : 1.2,
                     ),
                     boxShadow: isSelected
                         ? [
                             BoxShadow(
-                              color: AppThemes.pokedexLightBlue.withValues(alpha: 0.25),
+                              color: AppThemes.retroLightBlue.withValues(alpha: 0.25),
                               blurRadius: 8,
                               spreadRadius: 1,
                             ),
@@ -311,7 +312,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                         height: 6,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: isSelected ? AppThemes.pokedexLightBlue : Colors.transparent,
+                          color: isSelected ? AppThemes.retroLightBlue : Colors.transparent,
                           border: Border.all(
                             color: isSelected ? Colors.transparent : Colors.white24,
                             width: 1.0,
@@ -319,7 +320,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                           boxShadow: isSelected
                               ? [
                                   BoxShadow(
-                                    color: AppThemes.pokedexLightBlue.withValues(alpha: 0.8),
+                                    color: AppThemes.retroLightBlue.withValues(alpha: 0.8),
                                     blurRadius: 4,
                                     spreadRadius: 1,
                                   ),
@@ -349,7 +350,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                               fontWeight: FontWeight.bold,
                               fontSize: 8,
                               color: isSelected
-                                  ? AppThemes.pokedexLightBlue.withValues(alpha: 0.8)
+                                  ? AppThemes.retroLightBlue.withValues(alpha: 0.8)
                                   : Colors.white24,
                             ),
                           ),
@@ -376,15 +377,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     );
   }
 
-  Widget? _buildScanFab(BuildContext context, WidgetRef ref, bool isPokedex, PokedexSettings settings) {
-    if (isPokedex) {
+  Widget? _buildScanFab(BuildContext context, WidgetRef ref, bool isRetro, AppSettings settings) {
+    if (isRetro) {
       return Container(
         margin: const EdgeInsets.only(bottom: 16, right: 8),
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           boxShadow: [
             BoxShadow(
-              color: AppThemes.pokedexRed.withValues(alpha: 0.6),
+              color: AppThemes.retroRed.withValues(alpha: 0.6),
               blurRadius: 15,
               spreadRadius: 2,
             ),
@@ -393,12 +394,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         child: FloatingActionButton.large(
           onPressed: () async {
             if (settings.soundEffects) {
-              ref.read(soundServiceProvider).play(PokedexSound.select);
+              ref.read(soundServiceProvider).play(RetroSound.select);
             }
             await Navigator.pushNamed(context, '/add');
             setState(() {});
           },
-          backgroundColor: AppThemes.pokedexRed,
+          backgroundColor: AppThemes.retroRed,
           foregroundColor: Colors.white,
           shape: const CircleBorder(
             side: BorderSide(color: Colors.white70, width: 3),
@@ -436,8 +437,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
   void _playSelectSound() {
     final settings = ref.read(themeProvider);
-    if (settings.isPokedex && settings.soundEffects) {
-      ref.read(soundServiceProvider).play(PokedexSound.select);
+    if (settings.isRetro && settings.soundEffects) {
+      ref.read(soundServiceProvider).play(RetroSound.select);
     }
   }
 
@@ -445,7 +446,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     String label,
     bool selected,
     VoidCallback onTap,
-    bool isPokedex,
+    bool isRetro,
   ) {
     return GestureDetector(
       onTap: onTap,
@@ -454,21 +455,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
           color: selected
-              ? (isPokedex ? AppThemes.pokedexRed : Colors.blueAccent)
-              : (isPokedex ? AppThemes.pokedexDarkGray : Colors.grey[800]),
+              ? (isRetro ? AppThemes.retroRed : Colors.blueAccent)
+              : (isRetro ? AppThemes.retroDarkGray : Colors.grey[800]),
           borderRadius: BorderRadius.circular(20),
-          border: isPokedex
+          border: isRetro
               ? Border.all(
                   color: selected
                       ? Colors.white30
-                      : AppThemes.pokedexBlue.withValues(alpha: 0.5),
+                      : AppThemes.retroBlue.withValues(alpha: 0.5),
                   width: 2,
                 )
               : null,
-          boxShadow: selected && isPokedex
+          boxShadow: selected && isRetro
               ? [
                   BoxShadow(
-                    color: AppThemes.pokedexRed.withValues(alpha: 0.5),
+                    color: AppThemes.retroRed.withValues(alpha: 0.5),
                     blurRadius: 8,
                     spreadRadius: 1,
                   ),
@@ -476,11 +477,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               : null,
         ),
         child: Text(
-          isPokedex ? label.toUpperCase() : label,
+          isRetro ? label.toUpperCase() : label,
           style: TextStyle(
             color: Colors.white,
             fontWeight: selected ? FontWeight.bold : FontWeight.normal,
-            letterSpacing: isPokedex ? 1 : 0,
+            letterSpacing: isRetro ? 1 : 0,
             fontSize: 12,
           ),
         ),
@@ -488,7 +489,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     );
   }
 
-  Widget _buildEmptyState(bool isPokedex) {
+  Widget _buildEmptyState(bool isRetro) {
     final categoryState = ref.read(categoryProvider);
     final activeCategory = categoryState.activeCategory;
 
@@ -500,24 +501,24 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             activeCategory.emoji,
             style: TextStyle(
               fontSize: 72,
-              color: isPokedex
+              color: isRetro
                   ? Colors.white.withValues(alpha: 0.3)
                   : Colors.grey.withValues(alpha: 0.5),
             ),
           ),
           const SizedBox(height: 16),
           Text(
-            isPokedex
+            isRetro
                 ? 'NO ${activeCategory.name.toUpperCase()} DETECTED'
                 : 'No ${activeCategory.name.toLowerCase()} found. Add one!',
             style: TextStyle(
               color: Colors.white54,
-              fontSize: isPokedex ? 16 : 14,
-              letterSpacing: isPokedex ? 2 : 0,
-              fontWeight: isPokedex ? FontWeight.bold : FontWeight.normal,
+              fontSize: isRetro ? 16 : 14,
+              letterSpacing: isRetro ? 2 : 0,
+              fontWeight: isRetro ? FontWeight.bold : FontWeight.normal,
             ),
           ),
-          if (isPokedex) ...[
+          if (isRetro) ...[
             const SizedBox(height: 8),
             const Text(
               'Tap + on the cog wheel to begin scanning',
@@ -533,21 +534,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     );
   }
 
-  Widget _buildPlaneCard(Plane plane, int planeNumber, int gridIndex, PokedexSettings settings) {
+  Widget _buildPlaneCard(Plane plane, int planeNumber, int gridIndex, AppSettings settings) {
     final isIdentifying = plane.status == PlaneStatus.identifying;
-    final isPokedex = settings.isPokedex;
+    final isRetro = settings.isRetro;
 
     Widget card = Card(
       clipBehavior: Clip.antiAlias,
       shape: RoundedRectangleBorder(
         side: isIdentifying
             ? BorderSide(
-                color: isPokedex ? AppThemes.pokedexYellow : Colors.yellow,
+                color: isRetro ? AppThemes.retroYellow : Colors.yellow,
                 width: 3,
               )
-            : (isPokedex
+            : (isRetro
                   ? BorderSide(
-                      color: AppThemes.pokedexBlue.withValues(alpha: 0.5),
+                      color: AppThemes.retroBlue.withValues(alpha: 0.5),
                       width: 2,
                     )
                   : BorderSide.none),
@@ -556,7 +557,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       child: InkWell(
         onTap: () async {
           if (settings.soundEffects) {
-            ref.read(soundServiceProvider).play(PokedexSound.select);
+            ref.read(soundServiceProvider).play(RetroSound.select);
           }
           await Navigator.push(
             context,
@@ -594,7 +595,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                 errorBuilder: (context, error, stackTrace) =>
                                     const Center(child: Icon(Icons.broken_image)),
                               ),
-                        if (isPokedex) ...[
+                        if (isRetro) ...[
                           Container(
                             decoration: BoxDecoration(
                               gradient: LinearGradient(
@@ -602,7 +603,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                 end: Alignment.bottomCenter,
                                 colors: [
                                   Colors.transparent,
-                                  AppThemes.pokedexBlack.withValues(alpha: 0.8),
+                                  AppThemes.retroBlack.withValues(alpha: 0.8),
                                 ],
                               ),
                             ),
@@ -611,8 +612,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                             child: CustomPaint(
                               painter: ViewfinderBracketsPainter(
                                 color: isIdentifying
-                                    ? AppThemes.pokedexYellow.withValues(alpha: 0.8)
-                                    : AppThemes.pokedexBlue.withValues(alpha: 0.4),
+                                    ? AppThemes.retroYellow.withValues(alpha: 0.8)
+                                    : AppThemes.retroBlue.withValues(alpha: 0.4),
                               ),
                             ),
                           ),
@@ -627,12 +628,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 // Info section
                 Container(
                   padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
-                  decoration: isPokedex
+                  decoration: isRetro
                       ? BoxDecoration(
-                          color: AppThemes.pokedexCard,
+                          color: AppThemes.retroCard,
                           border: Border(
                             top: BorderSide(
-                              color: AppThemes.pokedexBlue.withValues(
+                              color: AppThemes.retroBlue.withValues(
                                 alpha: 0.3,
                               ),
                             ),
@@ -642,24 +643,24 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      if (isPokedex)
+                      if (isRetro)
                         Text(
                           '#${planeNumber.toString().padLeft(3, '0')}',
                           style: const TextStyle(
                             fontSize: 10,
-                            color: AppThemes.pokedexBlue,
+                            color: AppThemes.retroBlue,
                             fontWeight: FontWeight.bold,
                             letterSpacing: 1,
                           ),
                         ),
                       Text(
                         isIdentifying
-                            ? (isPokedex ? 'SCANNING...' : 'Identifying...')
-                            : (isPokedex
+                            ? (isRetro ? 'SCANNING...' : 'Identifying...')
+                            : (isRetro
                                   ? plane.identification.toUpperCase()
                                   : plane.identification),
                         style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(letterSpacing: isPokedex ? 0.5 : 0),
+                            ?.copyWith(letterSpacing: isRetro ? 0.5 : 0),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -670,7 +671,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                           runSpacing: 4,
                           children: plane.tags
                               .take(2)
-                              .map((tag) => _buildTag(tag, isPokedex))
+                              .map((tag) => _buildTag(tag, isRetro))
                               .toList(),
                         ),
                     ],
@@ -679,15 +680,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               ],
             ),
 
-            // Scanning indicator for Pokedex mode
-            if (isIdentifying && isPokedex)
+            // Scanning indicator for Retro mode
+            if (isIdentifying && isRetro)
               Positioned(
                 top: 8,
                 right: 8,
                 child: Container(
                   padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(
-                    color: AppThemes.pokedexYellow.withValues(alpha: 0.9),
+                    color: AppThemes.retroYellow.withValues(alpha: 0.9),
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: const Row(
@@ -721,29 +722,29 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     );
 
     // Apply entry animation if enabled
-    if (isPokedex && settings.entryAnimation) {
+    if (isRetro && settings.entryAnimation) {
       card = _AnimatedEntry(index: gridIndex, child: card);
     }
 
     return card;
   }
 
-  Widget _buildTag(String tag, bool isPokedex) {
+  Widget _buildTag(String tag, bool isRetro) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
-        color: isPokedex ? AppThemes.pokedexDarkGray : Colors.grey[200],
+        color: isRetro ? AppThemes.retroDarkGray : Colors.grey[200],
         borderRadius: BorderRadius.circular(4),
-        border: isPokedex
-            ? Border.all(color: AppThemes.pokedexBlue.withValues(alpha: 0.5))
+        border: isRetro
+            ? Border.all(color: AppThemes.retroBlue.withValues(alpha: 0.5))
             : null,
       ),
       child: Text(
-        isPokedex ? tag.toUpperCase() : tag,
+        isRetro ? tag.toUpperCase() : tag,
         style: TextStyle(
           fontSize: 10,
-          color: isPokedex ? AppThemes.pokedexLightBlue : Colors.black87,
-          letterSpacing: isPokedex ? 0.5 : 0,
+          color: isRetro ? AppThemes.retroLightBlue : Colors.black87,
+          letterSpacing: isRetro ? 0.5 : 0,
         ),
       ),
     );
@@ -751,8 +752,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
 }
 
-/// Custom Pokedex header widget with curved diagonal design
-class _PokedexHeader extends StatelessWidget {
+/// Custom Retro header widget with curved diagonal design
+class _RetroHeader extends StatelessWidget {
   final int scannedCount;
   final int identifyingCount;
   final int confirmedCount;
@@ -760,7 +761,7 @@ class _PokedexHeader extends StatelessWidget {
   final Animation<double> ledAnimation;
   final VoidCallback onSettingsTap;
 
-  const _PokedexHeader({
+  const _RetroHeader({
     required this.scannedCount,
     required this.identifyingCount,
     required this.confirmedCount,
@@ -787,10 +788,10 @@ class _PokedexHeader extends StatelessWidget {
             children: [
               // Background with custom shape
               ClipPath(
-                clipper: _PokedexHeaderClipper(),
+                clipper: _RetroHeaderClipper(),
                 child: Container(
                   decoration: BoxDecoration(
-                    color: AppThemes.pokedexDarkRed,
+                    color: AppThemes.retroDarkRed,
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black.withValues(alpha: 0.3),
@@ -804,7 +805,7 @@ class _PokedexHeader extends StatelessWidget {
 
               // Border line along the curved edge
               CustomPaint(
-                painter: _PokedexHeaderBorderPainter(),
+                painter: _RetroHeaderBorderPainter(),
                 size: Size(screenWidth, 110),
               ),
 
@@ -833,13 +834,13 @@ class _PokedexHeader extends StatelessWidget {
                             decoration: BoxDecoration(
                               color: const Color(0xFF0F140C),
                               border: Border.all(
-                                color: AppThemes.pokedexBlue.withValues(alpha: 0.4),
+                                color: AppThemes.retroBlue.withValues(alpha: 0.4),
                                 width: 1.5,
                               ),
                               borderRadius: BorderRadius.circular(4),
                               boxShadow: [
                                 BoxShadow(
-                                  color: AppThemes.pokedexBlue.withValues(alpha: 0.15),
+                                  color: AppThemes.retroBlue.withValues(alpha: 0.15),
                                   blurRadius: 4,
                                   spreadRadius: 1,
                                 ),
@@ -848,14 +849,14 @@ class _PokedexHeader extends StatelessWidget {
                             child: Text(
                               'INDEXED: ${scannedCount.toString().padLeft(3, '0')}',
                               style: TextStyle(
-                                color: AppThemes.pokedexLightBlue,
+                                color: AppThemes.retroLightBlue,
                                 fontFamily: 'Courier',
                                 fontWeight: FontWeight.bold,
                                 fontSize: 13,
                                 letterSpacing: 1.5,
                                 shadows: [
                                   Shadow(
-                                    color: AppThemes.pokedexLightBlue.withValues(alpha: 0.8),
+                                    color: AppThemes.retroLightBlue.withValues(alpha: 0.8),
                                     blurRadius: 4,
                                   ),
                                 ],
@@ -867,19 +868,19 @@ class _PokedexHeader extends StatelessWidget {
                           Row(
                             children: [
                               _buildHorizontalLed(
-                                color: AppThemes.pokedexRed,
+                                color: AppThemes.retroRed,
                                 isActive: identifyingCount > 0,
                                 label: 'SCAN',
                               ),
                               const SizedBox(width: 12),
                               _buildHorizontalLed(
-                                color: AppThemes.pokedexYellow,
+                                color: AppThemes.retroYellow,
                                 isActive: true,
                                 label: 'STBY',
                               ),
                               const SizedBox(width: 12),
                               _buildHorizontalLed(
-                                color: AppThemes.pokedexGreen,
+                                color: AppThemes.retroGreen,
                                 isActive: confirmedCount > 0,
                                 label: 'SYNC',
                               ),
@@ -897,11 +898,7 @@ class _PokedexHeader extends StatelessWidget {
                           children: [
                             Transform.translate(
                               offset: const Offset(0, -6),
-                              child: Image.asset(
-                                'assets/images/planedex_logo.png',
-                                height: 52,
-                                fit: BoxFit.contain,
-                              ),
+                              child: const DexiconLogo(fontSize: 22),
                             ),
                             const SizedBox(width: 8),
                             GestureDetector(
@@ -909,16 +906,16 @@ class _PokedexHeader extends StatelessWidget {
                               child: Container(
                                 padding: const EdgeInsets.all(6),
                                 decoration: BoxDecoration(
-                                  color: AppThemes.pokedexBlack.withValues(alpha: 0.8),
+                                  color: AppThemes.retroBlack.withValues(alpha: 0.8),
                                   shape: BoxShape.circle,
                                   border: Border.all(
-                                    color: AppThemes.pokedexBlue.withValues(alpha: 0.3),
+                                    color: AppThemes.retroBlue.withValues(alpha: 0.3),
                                   ),
                                 ),
                                 child: const Icon(
                                   Icons.settings,
                                   size: 20,
-                                  color: AppThemes.pokedexLightBlue,
+                                  color: AppThemes.retroLightBlue,
                                 ),
                               ),
                             ),
@@ -952,7 +949,7 @@ class _PokedexHeader extends StatelessWidget {
       height: 58,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: AppThemes.pokedexBlack,
+        color: AppThemes.retroBlack,
         border: Border.all(
           color: Colors.white70,
           width: 4,
@@ -971,15 +968,15 @@ class _PokedexHeader extends StatelessWidget {
           shape: BoxShape.circle,
           gradient: RadialGradient(
             colors: [
-              AppThemes.pokedexLightBlue,
-              AppThemes.pokedexBlue,
-              AppThemes.pokedexBlue.withValues(alpha: 0.8),
+              AppThemes.retroLightBlue,
+              AppThemes.retroBlue,
+              AppThemes.retroBlue.withValues(alpha: 0.8),
             ],
             stops: const [0.0, 0.45, 1.0],
           ),
           boxShadow: [
             BoxShadow(
-              color: AppThemes.pokedexLightBlue.withValues(
+              color: AppThemes.retroLightBlue.withValues(
                 alpha: glowIntensity * 0.75,
               ),
               blurRadius: 12 * glowIntensity,
@@ -1049,8 +1046,8 @@ class _PokedexHeader extends StatelessWidget {
   }
 }
 
-/// Custom clipper for the Pokedex header diagonal shape
-class _PokedexHeaderClipper extends CustomClipper<Path> {
+/// Custom clipper for the Retro header diagonal shape
+class _RetroHeaderClipper extends CustomClipper<Path> {
   @override
   Path getClip(Size size) {
     final path = Path();
@@ -1083,11 +1080,11 @@ class _PokedexHeaderClipper extends CustomClipper<Path> {
 }
 
 /// Custom painter for the diagonal border line
-class _PokedexHeaderBorderPainter extends CustomPainter {
+class _RetroHeaderBorderPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = AppThemes.pokedexBlack
+      ..color = AppThemes.retroBlack
       ..style = PaintingStyle.stroke
       ..strokeWidth = 3;
 
@@ -1103,7 +1100,7 @@ class _PokedexHeaderBorderPainter extends CustomPainter {
 
     // Inner highlight line
     final glowPaint = Paint()
-      ..color = AppThemes.pokedexBlue.withValues(alpha: 0.3)
+      ..color = AppThemes.retroBlue.withValues(alpha: 0.3)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.0;
 
@@ -1342,10 +1339,10 @@ class _ScanningOverlayState extends State<_ScanningOverlay>
                   child: Container(
                     height: 3,
                     decoration: BoxDecoration(
-                      color: AppThemes.pokedexYellow,
+                      color: AppThemes.retroYellow,
                       boxShadow: [
                         BoxShadow(
-                          color: AppThemes.pokedexYellow.withValues(alpha: 0.8),
+                          color: AppThemes.retroYellow.withValues(alpha: 0.8),
                           blurRadius: 8,
                           spreadRadius: 1.5,
                         ),
@@ -1357,7 +1354,7 @@ class _ScanningOverlayState extends State<_ScanningOverlay>
                 Positioned.fill(
                   child: Container(
                     decoration: BoxDecoration(
-                      color: AppThemes.pokedexYellow.withValues(alpha: 0.03),
+                      color: AppThemes.retroYellow.withValues(alpha: 0.03),
                     ),
                   ),
                 ),
@@ -1370,11 +1367,11 @@ class _ScanningOverlayState extends State<_ScanningOverlay>
   }
 }
 
-/// Pokedex device frame wrapper that respects SafeArea boundaries
-class _PokedexFrame extends StatelessWidget {
+/// Retro device frame wrapper that respects SafeArea boundaries
+class _RetroFrame extends StatelessWidget {
   final Widget child;
 
-  const _PokedexFrame({required this.child});
+  const _RetroFrame({required this.child});
 
   @override
   Widget build(BuildContext context) {
@@ -1383,8 +1380,8 @@ class _PokedexFrame extends StatelessWidget {
       child: SafeArea(
         child: Container(
           decoration: BoxDecoration(
-            color: AppThemes.pokedexBlack,
-            border: Border.all(color: AppThemes.pokedexDarkRed, width: 4),
+            color: AppThemes.retroBlack,
+            border: Border.all(color: AppThemes.retroDarkRed, width: 4),
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
@@ -1403,7 +1400,7 @@ class _PokedexFrame extends StatelessWidget {
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(
-                      color: AppThemes.pokedexBlue.withValues(alpha: 0.25),
+                      color: AppThemes.retroBlue.withValues(alpha: 0.25),
                       width: 1,
                     ),
                   ),
@@ -1420,9 +1417,9 @@ class _PokedexFrame extends StatelessWidget {
                   borderRadius: const BorderRadius.vertical(bottom: Radius.circular(11)),
                   gradient: LinearGradient(
                     colors: [
-                      AppThemes.pokedexDarkRed.withValues(alpha: 0.8),
-                      AppThemes.pokedexDarkRed,
-                      AppThemes.pokedexDarkRed.withValues(alpha: 0.8),
+                      AppThemes.retroDarkRed.withValues(alpha: 0.8),
+                      AppThemes.retroDarkRed,
+                      AppThemes.retroDarkRed.withValues(alpha: 0.8),
                     ],
                   ),
                 ),

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../providers/theme_provider.dart';
 
-/// App theme definitions - Classic (current) and Pokedex theme
+/// App theme definitions - Classic (current) and Retro theme
 class AppThemes {
   // ============================================
   // CLASSIC THEME (Original dark blue theme)
@@ -29,39 +29,39 @@ class AppThemes {
   }
 
   // ============================================
-  // POKEDEX THEME
+  // RETRO THEME
   // ============================================
 
-  // Pokedex Color Palette
-  static const Color pokedexRed = Color(0xFFDC0A2D);
-  static const Color pokedexDarkRed = Color(0xFF9B1B30);
-  static const Color pokedexBlack = Color(0xFF1A1A2E);
-  static const Color pokedexDarkGray = Color(0xFF16213E);
-  static const Color pokedexBlue = Color(0xFF3D7DCA);
-  static const Color pokedexLightBlue = Color(0xFF50C4ED);
-  static const Color pokedexYellow = Color(0xFFFFCB05);
-  static const Color pokedexGreen = Color(0xFF4CAF50);
-  static const Color pokedexSurface = Color(0xFF1E2A4A);
-  static const Color pokedexCard = Color(0xFF0F3460);
+  // Retro Color Palette
+  static const Color retroRed = Color(0xFFDC0A2D);
+  static const Color retroDarkRed = Color(0xFF9B1B30);
+  static const Color retroBlack = Color(0xFF1A1A2E);
+  static const Color retroDarkGray = Color(0xFF16213E);
+  static const Color retroBlue = Color(0xFF3D7DCA);
+  static const Color retroLightBlue = Color(0xFF50C4ED);
+  static const Color retroYellow = Color(0xFFFFCB05);
+  static const Color retroGreen = Color(0xFF4CAF50);
+  static const Color retroSurface = Color(0xFF1E2A4A);
+  static const Color retroCard = Color(0xFF0F3460);
 
   /// Get the appropriate TextTheme for the selected font
-  static TextTheme _getPokedexTextTheme(PokedexFont font) {
+  static TextTheme _getRetroTextTheme(RetroFont font) {
     TextStyle Function(TextStyle?) fontApplier;
 
     switch (font) {
-      case PokedexFont.pressStart:
+      case RetroFont.pressStart:
         fontApplier = (style) => GoogleFonts.pressStart2p(textStyle: style);
         break;
-      case PokedexFont.vt323:
+      case RetroFont.vt323:
         fontApplier = (style) => GoogleFonts.vt323(textStyle: style);
         break;
-      case PokedexFont.orbitron:
+      case RetroFont.orbitron:
         fontApplier = (style) => GoogleFonts.orbitron(textStyle: style);
         break;
-      case PokedexFont.audiowide:
+      case RetroFont.audiowide:
         fontApplier = (style) => GoogleFonts.audiowide(textStyle: style);
         break;
-      case PokedexFont.system:
+      case RetroFont.system:
         // Return default text theme
         return const TextTheme(
           headlineLarge: TextStyle(
@@ -95,7 +95,7 @@ class AppThemes {
 
     // Apply the selected font to all text styles
     // For pixel fonts like Press Start 2P, we need smaller sizes
-    final bool isPixelFont = font == PokedexFont.pressStart;
+    final bool isPixelFont = font == RetroFont.pressStart;
     final double sizeMultiplier = isPixelFont ? 0.6 : 1.0;
 
     return TextTheme(
@@ -156,9 +156,9 @@ class AppThemes {
     );
   }
 
-  /// Build the Pokedex theme with the selected font
-  static ThemeData pokedexTheme({PokedexFont font = PokedexFont.system}) {
-    final textTheme = _getPokedexTextTheme(font);
+  /// Build the Retro theme with the selected font
+  static ThemeData retroTheme({RetroFont font = RetroFont.system}) {
+    final textTheme = _getRetroTextTheme(font);
 
     return ThemeData(
       useMaterial3: true,
@@ -167,28 +167,28 @@ class AppThemes {
 
       // Color Scheme
       colorScheme: ColorScheme.dark(
-        primary: pokedexRed,
+        primary: retroRed,
         onPrimary: Colors.white,
-        primaryContainer: pokedexDarkRed,
+        primaryContainer: retroDarkRed,
         onPrimaryContainer: Colors.white,
-        secondary: pokedexBlue,
+        secondary: retroBlue,
         onSecondary: Colors.white,
-        secondaryContainer: pokedexDarkGray,
-        onSecondaryContainer: pokedexLightBlue,
-        tertiary: pokedexYellow,
+        secondaryContainer: retroDarkGray,
+        onSecondaryContainer: retroLightBlue,
+        tertiary: retroYellow,
         onTertiary: Colors.black,
-        surface: pokedexSurface,
+        surface: retroSurface,
         onSurface: Colors.white,
         error: const Color(0xFFFF5252),
         onError: Colors.white,
       ),
 
       // Scaffold
-      scaffoldBackgroundColor: pokedexBlack,
+      scaffoldBackgroundColor: retroBlack,
 
       // AppBar
       appBarTheme: AppBarTheme(
-        backgroundColor: pokedexDarkRed,
+        backgroundColor: retroDarkRed,
         foregroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
@@ -201,14 +201,14 @@ class AppThemes {
         ),
       ),
 
-      // Cards - Pokedex entry style
+      // Cards - Retro entry style
       cardTheme: CardThemeData(
-        color: pokedexCard,
+        color: retroCard,
         elevation: 8,
-        shadowColor: pokedexBlue.withValues(alpha: 0.4),
+        shadowColor: retroBlue.withValues(alpha: 0.4),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
-          side: BorderSide(color: pokedexBlue.withValues(alpha: 0.5), width: 2),
+          side: BorderSide(color: retroBlue.withValues(alpha: 0.5), width: 2),
         ),
         margin: const EdgeInsets.all(8),
       ),
@@ -216,10 +216,10 @@ class AppThemes {
       // Elevated Buttons - Device button style
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: pokedexRed,
+          backgroundColor: retroRed,
           foregroundColor: Colors.white,
           elevation: 6,
-          shadowColor: pokedexRed.withValues(alpha: 0.5),
+          shadowColor: retroRed.withValues(alpha: 0.5),
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(25),
@@ -232,14 +232,14 @@ class AppThemes {
       // Text Buttons
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
-          foregroundColor: pokedexLightBlue,
+          foregroundColor: retroLightBlue,
           textStyle: textTheme.labelLarge,
         ),
       ),
 
       // Floating Action Button
       floatingActionButtonTheme: FloatingActionButtonThemeData(
-        backgroundColor: pokedexRed,
+        backgroundColor: retroRed,
         foregroundColor: Colors.white,
         elevation: 8,
         shape: RoundedRectangleBorder(
@@ -251,29 +251,29 @@ class AppThemes {
       // Input Decoration
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: pokedexDarkGray.withValues(alpha: 0.7),
+        fillColor: retroDarkGray.withValues(alpha: 0.7),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: pokedexBlue.withValues(alpha: 0.5)),
+          borderSide: BorderSide(color: retroBlue.withValues(alpha: 0.5)),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: pokedexBlue.withValues(alpha: 0.3)),
+          borderSide: BorderSide(color: retroBlue.withValues(alpha: 0.3)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: pokedexBlue, width: 2),
+          borderSide: const BorderSide(color: retroBlue, width: 2),
         ),
-        labelStyle: TextStyle(color: pokedexLightBlue.withValues(alpha: 0.8)),
+        labelStyle: TextStyle(color: retroLightBlue.withValues(alpha: 0.8)),
         hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.4)),
-        prefixIconColor: pokedexBlue,
+        prefixIconColor: retroBlue,
       ),
 
       // Chip Theme
       chipTheme: ChipThemeData(
-        backgroundColor: pokedexDarkGray,
-        selectedColor: pokedexRed,
-        disabledColor: pokedexDarkGray.withValues(alpha: 0.5),
+        backgroundColor: retroDarkGray,
+        selectedColor: retroRed,
+        disabledColor: retroDarkGray.withValues(alpha: 0.5),
         labelStyle:
             textTheme.labelMedium?.copyWith(
               color: Colors.white,
@@ -284,43 +284,43 @@ class AppThemes {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
-          side: BorderSide(color: pokedexBlue.withValues(alpha: 0.5)),
+          side: BorderSide(color: retroBlue.withValues(alpha: 0.5)),
         ),
       ),
 
       // Dialog Theme
       dialogTheme: DialogThemeData(
-        backgroundColor: pokedexSurface,
+        backgroundColor: retroSurface,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
-          side: BorderSide(color: pokedexBlue.withValues(alpha: 0.5), width: 2),
+          side: BorderSide(color: retroBlue.withValues(alpha: 0.5), width: 2),
         ),
         titleTextStyle: textTheme.titleLarge,
       ),
 
       // Divider
       dividerTheme: DividerThemeData(
-        color: pokedexBlue.withValues(alpha: 0.3),
+        color: retroBlue.withValues(alpha: 0.3),
         thickness: 1,
         space: 24,
       ),
 
       // Icon Theme
-      iconTheme: const IconThemeData(color: pokedexLightBlue),
+      iconTheme: const IconThemeData(color: retroLightBlue),
 
       // Progress Indicator
       progressIndicatorTheme: const ProgressIndicatorThemeData(
-        color: pokedexLightBlue,
-        linearTrackColor: pokedexDarkGray,
+        color: retroLightBlue,
+        linearTrackColor: retroDarkGray,
       ),
 
       // Snackbar
       snackBarTheme: SnackBarThemeData(
-        backgroundColor: pokedexCard,
+        backgroundColor: retroCard,
         contentTextStyle: textTheme.bodyMedium?.copyWith(color: Colors.white),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
-          side: const BorderSide(color: pokedexBlue),
+          side: const BorderSide(color: retroBlue),
         ),
         behavior: SnackBarBehavior.floating,
       ),
@@ -328,7 +328,7 @@ class AppThemes {
   }
 }
 
-/// Extension to check if current theme is Pokedex
+/// Extension to check if current theme is Retro
 extension ThemeChecker on ThemeData {
-  bool get isPokedexTheme => colorScheme.primary == AppThemes.pokedexRed;
+  bool get isRetroTheme => colorScheme.primary == AppThemes.retroRed;
 }

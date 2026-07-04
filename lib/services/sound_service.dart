@@ -7,14 +7,14 @@ final soundServiceProvider = Provider<SoundService>((ref) {
 });
 
 /// Sound effect types
-enum PokedexSound {
+enum RetroSound {
   scan, // Quick beep when scanning starts
   complete, // Chime when identification complete
   select, // Click when selecting an option
   bootUp, // Boot sequence sound
 }
 
-/// Service to handle Pokedex sound effects
+/// Service to handle Retro sound effects
 class SoundService {
   final AudioPlayer _player = AudioPlayer();
 
@@ -22,24 +22,24 @@ class SoundService {
   /// Since we don't have actual audio files, we'll use the system
   /// to generate simple tones programmatically
 
-  Future<void> play(PokedexSound sound) async {
+  Future<void> play(RetroSound sound) async {
     // Using a data URI approach with a simple sine wave tone
     // These are base64-encoded minimal WAV files for different tones
 
     try {
       switch (sound) {
-        case PokedexSound.scan:
+        case RetroSound.scan:
           await _playTone(frequency: 800, durationMs: 100);
           break;
-        case PokedexSound.complete:
+        case RetroSound.complete:
           await _playTone(frequency: 1200, durationMs: 150);
           await Future.delayed(const Duration(milliseconds: 100));
           await _playTone(frequency: 1600, durationMs: 200);
           break;
-        case PokedexSound.select:
+        case RetroSound.select:
           await _playTone(frequency: 600, durationMs: 50);
           break;
-        case PokedexSound.bootUp:
+        case RetroSound.bootUp:
           for (int i = 0; i < 3; i++) {
             await _playTone(frequency: 400 + (i * 200), durationMs: 80);
             await Future.delayed(const Duration(milliseconds: 50));
@@ -67,7 +67,7 @@ class SoundService {
     try {
       // Create a minimal valid audio data (1 sample silence) just to trigger
       // the audio system - this serves as a placeholder
-      // Real implementation would use pre-recorded Pokedex-style sounds
+      // Real implementation would use pre-recorded Retro-style sounds
       await _player.setVolume(0.5);
 
       // For demo purposes, we'll just add a small delay to simulate the sound

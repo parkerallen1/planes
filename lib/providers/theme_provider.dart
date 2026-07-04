@@ -2,10 +2,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Theme mode enum
-enum AppThemeMode { classic, pokedex }
+enum AppThemeMode { classic, retro }
 
-/// Font style options for Pokedex mode
-enum PokedexFont {
+/// Font style options for Retro mode
+enum RetroFont {
   system, // Default system font
   pressStart, // Press Start 2P - retro pixel
   vt323, // VT323 - terminal/LCD
@@ -13,42 +13,42 @@ enum PokedexFont {
   audiowide, // Audiowide - wide sci-fi
 }
 
-extension PokedexFontExtension on PokedexFont {
+extension RetroFontExtension on RetroFont {
   String get displayName {
     switch (this) {
-      case PokedexFont.system:
+      case RetroFont.system:
         return 'System Default';
-      case PokedexFont.pressStart:
+      case RetroFont.pressStart:
         return 'Press Start 2P';
-      case PokedexFont.vt323:
+      case RetroFont.vt323:
         return 'VT323 Terminal';
-      case PokedexFont.orbitron:
+      case RetroFont.orbitron:
         return 'Orbitron';
-      case PokedexFont.audiowide:
+      case RetroFont.audiowide:
         return 'Audiowide';
     }
   }
 
   String get description {
     switch (this) {
-      case PokedexFont.system:
+      case RetroFont.system:
         return 'Clean, modern';
-      case PokedexFont.pressStart:
+      case RetroFont.pressStart:
         return 'Classic 8-bit pixel';
-      case PokedexFont.vt323:
+      case RetroFont.vt323:
         return 'LCD terminal';
-      case PokedexFont.orbitron:
+      case RetroFont.orbitron:
         return 'Sleek futuristic';
-      case PokedexFont.audiowide:
+      case RetroFont.audiowide:
         return 'Wide sci-fi';
     }
   }
 }
 
-/// All Pokedex settings in one state class
-class PokedexSettings {
+/// All Retro settings in one state class
+class AppSettings {
   final AppThemeMode themeMode;
-  final PokedexFont font;
+  final RetroFont font;
   final bool screenFrame;
   final bool animatedLeds;
   final bool crtScanlines;
@@ -56,9 +56,9 @@ class PokedexSettings {
   final bool soundEffects;
   final bool bootAnimation;
 
-  const PokedexSettings({
-    this.themeMode = AppThemeMode.pokedex,
-    this.font = PokedexFont.system,
+  const AppSettings({
+    this.themeMode = AppThemeMode.retro,
+    this.font = RetroFont.system,
     this.screenFrame = true,
     this.animatedLeds = true,
     this.crtScanlines = true,
@@ -67,11 +67,11 @@ class PokedexSettings {
     this.bootAnimation = true,
   });
 
-  bool get isPokedex => themeMode == AppThemeMode.pokedex;
+  bool get isRetro => themeMode == AppThemeMode.retro;
 
-  PokedexSettings copyWith({
+  AppSettings copyWith({
     AppThemeMode? themeMode,
-    PokedexFont? font,
+    RetroFont? font,
     bool? screenFrame,
     bool? animatedLeds,
     bool? crtScanlines,
@@ -79,7 +79,7 @@ class PokedexSettings {
     bool? soundEffects,
     bool? bootAnimation,
   }) {
-    return PokedexSettings(
+    return AppSettings(
       themeMode: themeMode ?? this.themeMode,
       font: font ?? this.font,
       screenFrame: screenFrame ?? this.screenFrame,
@@ -93,19 +93,19 @@ class PokedexSettings {
 }
 
 /// Provider for the theme/settings notifier
-final themeProvider = NotifierProvider<ThemeNotifier, PokedexSettings>(() {
+final themeProvider = NotifierProvider<ThemeNotifier, AppSettings>(() {
   return ThemeNotifier();
 });
 
-/// Convenience provider for just checking if Pokedex mode is on
-final isPokedexProvider = Provider<bool>((ref) {
-  return ref.watch(themeProvider).isPokedex;
+/// Convenience provider for just checking if Retro mode is on
+final isRetroProvider = Provider<bool>((ref) {
+  return ref.watch(themeProvider).isRetro;
 });
 
-/// Theme notifier that manages all Pokedex settings with persistence
-class ThemeNotifier extends Notifier<PokedexSettings> {
+/// Theme notifier that manages all Retro settings with persistence
+class ThemeNotifier extends Notifier<AppSettings> {
   static const String _themeKey = 'app_theme_mode';
-  static const String _fontKey = 'pokedex_font';
+  static const String _fontKey = 'retro_font';
   static const String _screenFrameKey = 'screen_frame';
   static const String _animatedLedsKey = 'animated_leds';
   static const String _crtScanlinesKey = 'crt_scanlines';
@@ -114,9 +114,9 @@ class ThemeNotifier extends Notifier<PokedexSettings> {
   static const String _bootAnimationKey = 'boot_animation';
 
   @override
-  PokedexSettings build() {
+  AppSettings build() {
     _loadSettings();
-    return const PokedexSettings(themeMode: AppThemeMode.pokedex);
+    return const AppSettings(themeMode: AppThemeMode.retro);
   }
 
   /// Load all settings from shared preferences
@@ -126,13 +126,13 @@ class ThemeNotifier extends Notifier<PokedexSettings> {
     final themeName = prefs.getString(_themeKey);
     final fontName = prefs.getString(_fontKey);
 
-    state = PokedexSettings(
+    state = AppSettings(
       themeMode: themeName == AppThemeMode.classic.name
           ? AppThemeMode.classic
-          : AppThemeMode.pokedex,
-      font: PokedexFont.values.firstWhere(
+          : AppThemeMode.retro,
+      font: RetroFont.values.firstWhere(
         (f) => f.name == fontName,
-        orElse: () => PokedexFont.system,
+        orElse: () => RetroFont.system,
       ),
       screenFrame: prefs.getBool(_screenFrameKey) ?? true,
       animatedLeds: prefs.getBool(_animatedLedsKey) ?? true,
@@ -156,7 +156,7 @@ class ThemeNotifier extends Notifier<PokedexSettings> {
   /// Toggle between themes
   Future<void> toggleTheme() async {
     final newTheme = state.themeMode == AppThemeMode.classic
-        ? AppThemeMode.pokedex
+        ? AppThemeMode.retro
         : AppThemeMode.classic;
     await setTheme(newTheme);
   }
@@ -168,7 +168,7 @@ class ThemeNotifier extends Notifier<PokedexSettings> {
   }
 
   /// Set the font
-  Future<void> setFont(PokedexFont font) async {
+  Future<void> setFont(RetroFont font) async {
     state = state.copyWith(font: font);
     await _saveSetting(_fontKey, font.name);
   }
@@ -210,5 +210,5 @@ class ThemeNotifier extends Notifier<PokedexSettings> {
   }
 
   // Convenience getters
-  bool get isPokedex => state.isPokedex;
+  bool get isRetro => state.isRetro;
 }

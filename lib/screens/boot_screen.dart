@@ -3,9 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../theme/app_themes.dart';
 import '../providers/theme_provider.dart';
 import '../services/sound_service.dart';
+import '../widgets/dexicon_logo.dart';
 import 'home_screen.dart';
 
-/// Boot screen with Pokedex-style startup animation
+/// Boot screen with Retro-style startup animation
 class BootScreen extends ConsumerStatefulWidget {
   const BootScreen({super.key});
 
@@ -70,7 +71,7 @@ class _BootScreenState extends ConsumerState<BootScreen>
     // Play boot sound if enabled
     if (settings.soundEffects) {
       final soundService = ref.read(soundServiceProvider);
-      soundService.play(PokedexSound.bootUp);
+      soundService.play(RetroSound.bootUp);
     }
 
     await _bootController.forward();
@@ -105,7 +106,7 @@ class _BootScreenState extends ConsumerState<BootScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppThemes.pokedexBlack,
+      backgroundColor: AppThemes.retroBlack,
       body: AnimatedBuilder(
         animation: _bootController,
         builder: (context, child) {
@@ -119,11 +120,11 @@ class _BootScreenState extends ConsumerState<BootScreen>
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      _buildBootLed(0, AppThemes.pokedexBlue),
+                      _buildBootLed(0, AppThemes.retroBlue),
                       const SizedBox(width: 12),
-                      _buildBootLed(1, AppThemes.pokedexRed),
+                      _buildBootLed(1, AppThemes.retroRed),
                       const SizedBox(width: 12),
-                      _buildBootLed(2, AppThemes.pokedexGreen),
+                      _buildBootLed(2, AppThemes.retroGreen),
                     ],
                   ),
                 ),
@@ -140,7 +141,7 @@ class _BootScreenState extends ConsumerState<BootScreen>
                         decoration: BoxDecoration(
                           boxShadow: [
                             BoxShadow(
-                              color: AppThemes.pokedexBlue.withValues(
+                              color: AppThemes.retroBlue.withValues(
                                 alpha: _glow.value * 0.4,
                               ),
                               blurRadius: 30,
@@ -150,12 +151,7 @@ class _BootScreenState extends ConsumerState<BootScreen>
                         ),
                         child: Opacity(
                           opacity: _textReveal.value,
-                          child: Image.asset(
-                            'assets/images/planedex_app_icon.png',
-                            width: 280,
-                            height: 200,
-                            fit: BoxFit.contain,
-                          ),
+                          child: const DexiconLogo(fontSize: 40),
                         ),
                       );
                     },
@@ -168,10 +164,10 @@ class _BootScreenState extends ConsumerState<BootScreen>
                 Opacity(
                   opacity: _textReveal.value,
                   child: Text(
-                    'Aircraft Identification System',
+                    'Visual Identification System',
                     style: TextStyle(
                       fontSize: 12,
-                      color: AppThemes.pokedexLightBlue.withValues(alpha: 0.8),
+                      color: AppThemes.retroLightBlue.withValues(alpha: 0.8),
                       letterSpacing: 2,
                     ),
                   ),
@@ -187,9 +183,9 @@ class _BootScreenState extends ConsumerState<BootScreen>
                       width: 150,
                       child: LinearProgressIndicator(
                         value: _ledSequence.value,
-                        backgroundColor: AppThemes.pokedexDarkGray,
+                        backgroundColor: AppThemes.retroDarkGray,
                         valueColor: const AlwaysStoppedAnimation(
-                          AppThemes.pokedexBlue,
+                          AppThemes.retroBlue,
                         ),
                       ),
                     ),
@@ -203,7 +199,7 @@ class _BootScreenState extends ConsumerState<BootScreen>
                     'INITIALIZING...',
                     style: TextStyle(
                       fontSize: 10,
-                      color: AppThemes.pokedexBlue.withValues(alpha: 0.7),
+                      color: AppThemes.retroBlue.withValues(alpha: 0.7),
                       letterSpacing: 3,
                     ),
                   ),

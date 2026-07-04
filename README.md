@@ -1,16 +1,17 @@
-# plane_tracker
+# Dexicon
 
-A new Flutter project.
+Scan, identify, and collect anything with AI. Point the camera at a plane,
+bird, car, flower — any category you create — and Dexicon identifies it with
+Gemini, tags it, and adds it to your collection. Styled as a retro 90s
+handheld scanner, complete with LEDs, CRT scanlines, and boot sequence.
 
-## Getting Started
+## Setup
 
-This project is a starting point for a Flutter application.
+1. `flutter pub get`
+2. Create a `.env.local` file in the project root with your Gemini API key:
 
-A few resources to get you started if this is your first Flutter project:
+   ```
+   GEMINI_API_KEY=your_key_here
+   ```
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+3. `flutter run`

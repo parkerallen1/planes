@@ -16,131 +16,131 @@ class SettingsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(themeProvider);
-    final isPokedex = settings.isPokedex;
+    final isRetro = settings.isRetro;
 
     return Scaffold(
-      appBar: AppBar(title: Text(isPokedex ? 'SETTINGS' : 'Settings')),
+      appBar: AppBar(title: Text(isRetro ? 'SETTINGS' : 'Settings')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Theme Section
-            _buildSectionHeader(context, 'Theme', isPokedex),
+            _buildSectionHeader(context, 'Theme', isRetro),
             const SizedBox(height: 16),
-            _ThemeToggleCard(isPokedex: isPokedex, settings: settings),
+            _ThemeToggleCard(isRetro: isRetro, settings: settings),
 
             const SizedBox(height: 32),
 
-            // Font Section (only in Pokedex mode)
-            if (isPokedex) ...[
-              _buildSectionHeader(context, 'Font Style', isPokedex),
+            // Font Section (only in Retro mode)
+            if (isRetro) ...[
+              _buildSectionHeader(context, 'Font Style', isRetro),
               const SizedBox(height: 16),
               _FontSelector(currentFont: settings.font),
               const SizedBox(height: 32),
             ],
 
             // Visual Effects Section
-            _buildSectionHeader(context, 'Visual Effects', isPokedex),
+            _buildSectionHeader(context, 'Visual Effects', isRetro),
             const SizedBox(height: 16),
             _ToggleTile(
               icon: Icons.crop_free,
               title: 'Screen Frame',
-              subtitle: 'Pokedex device bezel effect',
+              subtitle: 'Retro device bezel effect',
               value: settings.screenFrame,
-              enabled: isPokedex,
+              enabled: isRetro,
               onChanged: (v) =>
                   ref.read(themeProvider.notifier).setScreenFrame(v),
-              isPokedex: isPokedex,
+              isRetro: isRetro,
             ),
             _ToggleTile(
               icon: Icons.blur_linear,
               title: 'CRT Scanlines',
               subtitle: 'Retro screen line overlay',
               value: settings.crtScanlines,
-              enabled: isPokedex,
+              enabled: isRetro,
               onChanged: (v) =>
                   ref.read(themeProvider.notifier).setCrtScanlines(v),
-              isPokedex: isPokedex,
+              isRetro: isRetro,
             ),
             _ToggleTile(
               icon: Icons.lightbulb,
               title: 'Animated LEDs',
               subtitle: 'Pulsing LED indicators',
               value: settings.animatedLeds,
-              enabled: isPokedex,
+              enabled: isRetro,
               onChanged: (v) =>
                   ref.read(themeProvider.notifier).setAnimatedLeds(v),
-              isPokedex: isPokedex,
+              isRetro: isRetro,
             ),
             _ToggleTile(
               icon: Icons.auto_awesome,
               title: 'Entry Animations',
               subtitle: 'Animated card reveals',
               value: settings.entryAnimation,
-              enabled: isPokedex,
+              enabled: isRetro,
               onChanged: (v) =>
                   ref.read(themeProvider.notifier).setEntryAnimation(v),
-              isPokedex: isPokedex,
+              isRetro: isRetro,
             ),
 
             const SizedBox(height: 32),
 
             // Audio Section
-            _buildSectionHeader(context, 'Audio', isPokedex),
+            _buildSectionHeader(context, 'Audio', isRetro),
             const SizedBox(height: 16),
             _ToggleTile(
               icon: Icons.volume_up,
               title: 'Sound Effects',
               subtitle: 'Scan beeps and chimes',
               value: settings.soundEffects,
-              enabled: isPokedex,
+              enabled: isRetro,
               onChanged: (v) {
                 ref.read(themeProvider.notifier).setSoundEffects(v);
                 if (v) {
                   // Play a sample sound when enabling
-                  ref.read(soundServiceProvider).play(PokedexSound.select);
+                  ref.read(soundServiceProvider).play(RetroSound.select);
                 }
               },
-              isPokedex: isPokedex,
+              isRetro: isRetro,
             ),
 
             const SizedBox(height: 32),
 
             // Startup Section
-            _buildSectionHeader(context, 'Startup', isPokedex),
+            _buildSectionHeader(context, 'Startup', isRetro),
             const SizedBox(height: 16),
             _ToggleTile(
               icon: Icons.play_circle_outline,
               title: 'Boot Animation',
-              subtitle: 'Pokedex startup sequence',
+              subtitle: 'Retro startup sequence',
               value: settings.bootAnimation,
-              enabled: isPokedex,
+              enabled: isRetro,
               onChanged: (v) =>
                   ref.read(themeProvider.notifier).setBootAnimation(v),
-              isPokedex: isPokedex,
+              isRetro: isRetro,
             ),
 
             const SizedBox(height: 32),
 
             // Categories Section
-            _buildSectionHeader(context, 'Categories', isPokedex),
+            _buildSectionHeader(context, 'Categories', isRetro),
             const SizedBox(height: 16),
-            _CategoryManager(isPokedex: isPokedex),
+            _CategoryManager(isRetro: isRetro),
 
             const SizedBox(height: 32),
 
             // Data Section
-            _buildSectionHeader(context, 'Data', isPokedex),
+            _buildSectionHeader(context, 'Data', isRetro),
             const SizedBox(height: 16),
-            _ExportButton(isPokedex: isPokedex),
+            _ExportButton(isRetro: isRetro),
 
             const SizedBox(height: 32),
 
             // About Section
-            _buildSectionHeader(context, 'About', isPokedex),
+            _buildSectionHeader(context, 'About', isRetro),
             const SizedBox(height: 16),
-            _buildAboutCard(context, isPokedex),
+            _buildAboutCard(context, isRetro),
 
             const SizedBox(height: 32),
           ],
@@ -152,20 +152,20 @@ class SettingsScreen extends ConsumerWidget {
   Widget _buildSectionHeader(
     BuildContext context,
     String title,
-    bool isPokedex,
+    bool isRetro,
   ) {
     return Row(
       children: [
-        if (isPokedex) ...[
+        if (isRetro) ...[
           Container(
             width: 8,
             height: 8,
             decoration: BoxDecoration(
-              color: AppThemes.pokedexBlue,
+              color: AppThemes.retroBlue,
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                  color: AppThemes.pokedexBlue.withValues(alpha: 0.6),
+                  color: AppThemes.retroBlue.withValues(alpha: 0.6),
                   blurRadius: 6,
                   spreadRadius: 2,
                 ),
@@ -175,9 +175,9 @@ class SettingsScreen extends ConsumerWidget {
           const SizedBox(width: 12),
         ],
         Text(
-          isPokedex ? title.toUpperCase() : title,
+          isRetro ? title.toUpperCase() : title,
           style: Theme.of(context).textTheme.titleLarge?.copyWith(
-            letterSpacing: isPokedex ? 3 : 0,
+            letterSpacing: isRetro ? 3 : 0,
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -185,15 +185,15 @@ class SettingsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildAboutCard(BuildContext context, bool isPokedex) {
+  Widget _buildAboutCard(BuildContext context, bool isRetro) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Theme.of(context).cardTheme.color,
         borderRadius: BorderRadius.circular(12),
-        border: isPokedex
+        border: isRetro
             ? Border.all(
-                color: AppThemes.pokedexBlue.withValues(alpha: 0.5),
+                color: AppThemes.retroBlue.withValues(alpha: 0.5),
                 width: 2,
               )
             : null,
@@ -204,26 +204,26 @@ class SettingsScreen extends ConsumerWidget {
           Row(
             children: [
               Icon(
-                Icons.airplanemode_active,
-                color: isPokedex
-                    ? AppThemes.pokedexLightBlue
+                Icons.radar,
+                color: isRetro
+                    ? AppThemes.retroLightBlue
                     : Colors.blueAccent,
                 size: 28,
               ),
               const SizedBox(width: 12),
               Text(
-                isPokedex ? 'PLANEDEX' : 'Plane Tracker',
+                isRetro ? 'DEXICON' : 'Dexicon',
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  letterSpacing: isPokedex ? 2 : 0,
+                  letterSpacing: isRetro ? 2 : 0,
                 ),
               ),
             ],
           ),
           const SizedBox(height: 12),
           Text(
-            isPokedex
-                ? 'Advanced aircraft identification and logging system. Scan, identify, and catalog aircraft in your area.'
-                : 'Scan and identify aircraft using AI-powered image recognition.',
+            isRetro
+                ? 'Advanced visual identification and logging system. Scan, identify, and catalog anything you spot.'
+                : 'Scan and identify anything using AI-powered image recognition.',
             style: Theme.of(context).textTheme.bodyMedium,
           ),
           const SizedBox(height: 8),
@@ -241,10 +241,10 @@ class SettingsScreen extends ConsumerWidget {
 
 /// Theme selection card with toggle
 class _ThemeToggleCard extends ConsumerWidget {
-  final bool isPokedex;
-  final PokedexSettings settings;
+  final bool isRetro;
+  final AppSettings settings;
 
-  const _ThemeToggleCard({required this.isPokedex, required this.settings});
+  const _ThemeToggleCard({required this.isRetro, required this.settings});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -254,7 +254,7 @@ class _ThemeToggleCard extends ConsumerWidget {
           child: _ThemeCard(
             title: 'Classic',
             subtitle: 'Original dark theme',
-            isSelected: !isPokedex,
+            isSelected: !isRetro,
             previewColors: [
               const Color(0xFF121212),
               Colors.blueAccent,
@@ -269,15 +269,15 @@ class _ThemeToggleCard extends ConsumerWidget {
           child: _ThemeCard(
             title: 'Pokédex',
             subtitle: 'Scanner mode',
-            isSelected: isPokedex,
+            isSelected: isRetro,
             previewColors: [
-              AppThemes.pokedexBlack,
-              AppThemes.pokedexRed,
-              AppThemes.pokedexBlue,
+              AppThemes.retroBlack,
+              AppThemes.retroRed,
+              AppThemes.retroBlue,
             ],
             onTap: () =>
-                ref.read(themeProvider.notifier).setTheme(AppThemeMode.pokedex),
-            isPokedexStyle: true,
+                ref.read(themeProvider.notifier).setTheme(AppThemeMode.retro),
+            isRetroStyle: true,
           ),
         ),
       ],
@@ -292,7 +292,7 @@ class _ThemeCard extends StatelessWidget {
   final bool isSelected;
   final List<Color> previewColors;
   final VoidCallback onTap;
-  final bool isPokedexStyle;
+  final bool isRetroStyle;
 
   const _ThemeCard({
     required this.title,
@@ -300,7 +300,7 @@ class _ThemeCard extends StatelessWidget {
     required this.isSelected,
     required this.previewColors,
     required this.onTap,
-    this.isPokedexStyle = false,
+    this.isRetroStyle = false,
   });
 
   @override
@@ -315,7 +315,7 @@ class _ThemeCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: isSelected
-                ? (isPokedexStyle ? AppThemes.pokedexRed : Colors.blueAccent)
+                ? (isRetroStyle ? AppThemes.retroRed : Colors.blueAccent)
                 : Colors.white24,
             width: isSelected ? 3 : 1,
           ),
@@ -323,8 +323,8 @@ class _ThemeCard extends StatelessWidget {
               ? [
                   BoxShadow(
                     color:
-                        (isPokedexStyle
-                                ? AppThemes.pokedexRed
+                        (isRetroStyle
+                                ? AppThemes.retroRed
                                 : Colors.blueAccent)
                             .withValues(alpha: 0.4),
                     blurRadius: 12,
@@ -354,8 +354,8 @@ class _ThemeCard extends StatelessWidget {
                 if (isSelected)
                   Icon(
                     Icons.check_circle,
-                    color: isPokedexStyle
-                        ? AppThemes.pokedexRed
+                    color: isRetroStyle
+                        ? AppThemes.retroRed
                         : Colors.blueAccent,
                     size: 22,
                   ),
@@ -384,14 +384,14 @@ class _ThemeCard extends StatelessWidget {
 
 /// Font selector widget
 class _FontSelector extends ConsumerWidget {
-  final PokedexFont currentFont;
+  final RetroFont currentFont;
 
   const _FontSelector({required this.currentFont});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Column(
-      children: PokedexFont.values.map((font) {
+      children: RetroFont.values.map((font) {
         final isSelected = currentFont == font;
         return Padding(
           padding: const EdgeInsets.only(bottom: 8),
@@ -401,7 +401,7 @@ class _FontSelector extends ConsumerWidget {
             onTap: () {
               ref.read(themeProvider.notifier).setFont(font);
               if (ref.read(themeProvider).soundEffects) {
-                ref.read(soundServiceProvider).play(PokedexSound.select);
+                ref.read(soundServiceProvider).play(RetroSound.select);
               }
             },
           ),
@@ -413,7 +413,7 @@ class _FontSelector extends ConsumerWidget {
 
 /// Individual font tile with preview
 class _FontTile extends StatelessWidget {
-  final PokedexFont font;
+  final RetroFont font;
   final bool isSelected;
   final VoidCallback onTap;
 
@@ -426,17 +426,17 @@ class _FontTile extends StatelessWidget {
   TextStyle _getFontStyle() {
     const baseStyle = TextStyle(fontSize: 16, color: Colors.white);
     switch (font) {
-      case PokedexFont.pressStart:
+      case RetroFont.pressStart:
         return GoogleFonts.pressStart2p(
           textStyle: baseStyle.copyWith(fontSize: 10),
         );
-      case PokedexFont.vt323:
+      case RetroFont.vt323:
         return GoogleFonts.vt323(textStyle: baseStyle.copyWith(fontSize: 20));
-      case PokedexFont.orbitron:
+      case RetroFont.orbitron:
         return GoogleFonts.orbitron(textStyle: baseStyle);
-      case PokedexFont.audiowide:
+      case RetroFont.audiowide:
         return GoogleFonts.audiowide(textStyle: baseStyle);
-      case PokedexFont.system:
+      case RetroFont.system:
         return baseStyle;
     }
   }
@@ -450,19 +450,19 @@ class _FontTile extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: isSelected
-              ? AppThemes.pokedexCard
-              : AppThemes.pokedexDarkGray.withValues(alpha: 0.5),
+              ? AppThemes.retroCard
+              : AppThemes.retroDarkGray.withValues(alpha: 0.5),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: isSelected
-                ? AppThemes.pokedexRed
-                : AppThemes.pokedexBlue.withValues(alpha: 0.3),
+                ? AppThemes.retroRed
+                : AppThemes.retroBlue.withValues(alpha: 0.3),
             width: isSelected ? 2 : 1,
           ),
           boxShadow: isSelected
               ? [
                   BoxShadow(
-                    color: AppThemes.pokedexRed.withValues(alpha: 0.3),
+                    color: AppThemes.retroRed.withValues(alpha: 0.3),
                     blurRadius: 8,
                     spreadRadius: 1,
                   ),
@@ -488,7 +488,7 @@ class _FontTile extends StatelessWidget {
                     font.description,
                     style: TextStyle(
                       fontSize: 12,
-                      color: AppThemes.pokedexLightBlue.withValues(alpha: 0.7),
+                      color: AppThemes.retroLightBlue.withValues(alpha: 0.7),
                     ),
                   ),
                 ],
@@ -499,21 +499,21 @@ class _FontTile extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
-                color: AppThemes.pokedexBlack,
+                color: AppThemes.retroBlack,
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
-                  color: AppThemes.pokedexBlue.withValues(alpha: 0.3),
+                  color: AppThemes.retroBlue.withValues(alpha: 0.3),
                 ),
               ),
-              child: Text('PLANEDEX', style: _getFontStyle()),
+              child: Text('DEXICON', style: _getFontStyle()),
             ),
             const SizedBox(width: 12),
             if (isSelected)
-              Icon(Icons.check_circle, color: AppThemes.pokedexGreen, size: 24)
+              Icon(Icons.check_circle, color: AppThemes.retroGreen, size: 24)
             else
               Icon(
                 Icons.radio_button_unchecked,
-                color: AppThemes.pokedexBlue.withValues(alpha: 0.5),
+                color: AppThemes.retroBlue.withValues(alpha: 0.5),
                 size: 24,
               ),
           ],
@@ -531,7 +531,7 @@ class _ToggleTile extends ConsumerWidget {
   final bool value;
   final bool enabled;
   final ValueChanged<bool> onChanged;
-  final bool isPokedex;
+  final bool isRetro;
 
   const _ToggleTile({
     required this.icon,
@@ -540,12 +540,12 @@ class _ToggleTile extends ConsumerWidget {
     required this.value,
     required this.enabled,
     required this.onChanged,
-    required this.isPokedex,
+    required this.isRetro,
   });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final effectiveEnabled = enabled && isPokedex;
+    final effectiveEnabled = enabled && isRetro;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
@@ -555,11 +555,11 @@ class _ToggleTile extends ConsumerWidget {
           decoration: BoxDecoration(
             color: Theme.of(context).cardTheme.color,
             borderRadius: BorderRadius.circular(12),
-            border: isPokedex
+            border: isRetro
                 ? Border.all(
                     color: value && effectiveEnabled
-                        ? AppThemes.pokedexGreen.withValues(alpha: 0.5)
-                        : AppThemes.pokedexBlue.withValues(alpha: 0.3),
+                        ? AppThemes.retroGreen.withValues(alpha: 0.5)
+                        : AppThemes.retroBlue.withValues(alpha: 0.3),
                     width: 1,
                   )
                 : null,
@@ -568,16 +568,16 @@ class _ToggleTile extends ConsumerWidget {
             leading: Icon(
               icon,
               color: effectiveEnabled && value
-                  ? (isPokedex ? AppThemes.pokedexGreen : Colors.blueAccent)
-                  : (isPokedex
-                        ? AppThemes.pokedexBlue.withValues(alpha: 0.5)
+                  ? (isRetro ? AppThemes.retroGreen : Colors.blueAccent)
+                  : (isRetro
+                        ? AppThemes.retroBlue.withValues(alpha: 0.5)
                         : Colors.grey),
             ),
             title: Text(
-              isPokedex ? title.toUpperCase() : title,
+              isRetro ? title.toUpperCase() : title,
               style: TextStyle(
                 fontWeight: FontWeight.w600,
-                letterSpacing: isPokedex ? 0.5 : 0,
+                letterSpacing: isRetro ? 0.5 : 0,
                 fontSize: 14,
               ),
             ),
@@ -586,14 +586,14 @@ class _ToggleTile extends ConsumerWidget {
               style: TextStyle(
                 color: Colors.white60,
                 fontSize: 12,
-                letterSpacing: isPokedex ? 0.3 : 0,
+                letterSpacing: isRetro ? 0.3 : 0,
               ),
             ),
             trailing: Switch(
               value: value,
               onChanged: effectiveEnabled ? onChanged : null,
-              activeColor: AppThemes.pokedexGreen,
-              activeTrackColor: AppThemes.pokedexGreen.withValues(alpha: 0.5),
+              activeColor: AppThemes.retroGreen,
+              activeTrackColor: AppThemes.retroGreen.withValues(alpha: 0.5),
               inactiveThumbColor: Colors.grey,
               inactiveTrackColor: Colors.grey.withValues(alpha: 0.3),
             ),
@@ -607,9 +607,9 @@ class _ToggleTile extends ConsumerWidget {
 
 /// Category manager widget — lists all categories with add/edit/delete
 class _CategoryManager extends ConsumerWidget {
-  final bool isPokedex;
+  final bool isRetro;
 
-  const _CategoryManager({required this.isPokedex});
+  const _CategoryManager({required this.isRetro});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -629,28 +629,28 @@ class _CategoryManager extends ConsumerWidget {
             child: Container(
               decoration: BoxDecoration(
                 color: isActive
-                    ? (isPokedex
-                          ? AppThemes.pokedexCard
+                    ? (isRetro
+                          ? AppThemes.retroCard
                           : const Color(0xFF1E2A5A))
-                    : (isPokedex
-                          ? AppThemes.pokedexDarkGray.withValues(alpha: 0.7)
+                    : (isRetro
+                          ? AppThemes.retroDarkGray.withValues(alpha: 0.7)
                           : const Color(0xFF1E1E1E)),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
                   color: isActive
-                      ? (isPokedex
-                            ? AppThemes.pokedexRed
+                      ? (isRetro
+                            ? AppThemes.retroRed
                             : Colors.blueAccent)
-                      : (isPokedex
-                            ? AppThemes.pokedexBlue.withValues(alpha: 0.3)
+                      : (isRetro
+                            ? AppThemes.retroBlue.withValues(alpha: 0.3)
                             : Colors.white12),
                   width: isActive ? 2 : 1,
                 ),
                 boxShadow: isActive
                     ? [
                         BoxShadow(
-                          color: (isPokedex
-                                  ? AppThemes.pokedexRed
+                          color: (isRetro
+                                  ? AppThemes.retroRed
                                   : Colors.blueAccent)
                               .withValues(alpha: 0.25),
                           blurRadius: 8,
@@ -661,11 +661,11 @@ class _CategoryManager extends ConsumerWidget {
               child: ListTile(
                 leading: Text(cat.emoji, style: const TextStyle(fontSize: 24)),
                 title: Text(
-                  isPokedex ? cat.name.toUpperCase() : cat.name,
+                  isRetro ? cat.name.toUpperCase() : cat.name,
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     color: isActive ? Colors.white : Colors.white70,
-                    letterSpacing: isPokedex ? 1 : 0,
+                    letterSpacing: isRetro ? 1 : 0,
                     fontSize: 14,
                   ),
                 ),
@@ -684,13 +684,13 @@ class _CategoryManager extends ConsumerWidget {
                           vertical: 3,
                         ),
                         decoration: BoxDecoration(
-                          color: isPokedex
-                              ? AppThemes.pokedexRed
+                          color: isRetro
+                              ? AppThemes.retroRed
                               : Colors.blueAccent,
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: Text(
-                          isPokedex ? 'ACTIVE' : 'Active',
+                          isRetro ? 'ACTIVE' : 'Active',
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 10,
@@ -703,8 +703,8 @@ class _CategoryManager extends ConsumerWidget {
                       icon: Icon(
                         Icons.edit,
                         size: 18,
-                        color: isPokedex
-                            ? AppThemes.pokedexLightBlue
+                        color: isRetro
+                            ? AppThemes.retroLightBlue
                             : Colors.white54,
                       ),
                       onPressed: () =>
@@ -718,8 +718,8 @@ class _CategoryManager extends ConsumerWidget {
                         Icons.delete_outline,
                         size: 18,
                         color: categories.length > 1
-                            ? (isPokedex
-                                  ? AppThemes.pokedexRed.withValues(alpha: 0.8)
+                            ? (isRetro
+                                  ? AppThemes.retroRed.withValues(alpha: 0.8)
                                   : Colors.red.withValues(alpha: 0.6))
                             : Colors.white12,
                       ),
@@ -747,8 +747,8 @@ class _CategoryManager extends ConsumerWidget {
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: isPokedex
-                    ? AppThemes.pokedexBlue.withValues(alpha: 0.5)
+                color: isRetro
+                    ? AppThemes.retroBlue.withValues(alpha: 0.5)
                     : Colors.blueAccent.withValues(alpha: 0.4),
                 width: 1.5,
               ),
@@ -758,20 +758,20 @@ class _CategoryManager extends ConsumerWidget {
               children: [
                 Icon(
                   Icons.add_circle_outline,
-                  color: isPokedex
-                      ? AppThemes.pokedexLightBlue
+                  color: isRetro
+                      ? AppThemes.retroLightBlue
                       : Colors.blueAccent,
                   size: 20,
                 ),
                 const SizedBox(width: 10),
                 Text(
-                  isPokedex ? 'ADD NEW CATEGORY' : 'Add New Category',
+                  isRetro ? 'ADD NEW CATEGORY' : 'Add New Category',
                   style: TextStyle(
-                    color: isPokedex
-                        ? AppThemes.pokedexLightBlue
+                    color: isRetro
+                        ? AppThemes.retroLightBlue
                         : Colors.blueAccent,
                     fontWeight: FontWeight.bold,
-                    letterSpacing: isPokedex ? 1 : 0,
+                    letterSpacing: isRetro ? 1 : 0,
                     fontSize: 13,
                   ),
                 ),
@@ -786,8 +786,8 @@ class _CategoryManager extends ConsumerWidget {
           onPressed: () => _confirmReset(context, ref),
           icon: const Icon(Icons.restore, size: 16),
           label: Text(
-            isPokedex ? 'RESET TO DEFAULTS' : 'Reset to Defaults',
-            style: TextStyle(letterSpacing: isPokedex ? 0.5 : 0, fontSize: 12),
+            isRetro ? 'RESET TO DEFAULTS' : 'Reset to Defaults',
+            style: TextStyle(letterSpacing: isRetro ? 0.5 : 0, fontSize: 12),
           ),
           style: TextButton.styleFrom(
             foregroundColor: Colors.white38,
@@ -980,7 +980,7 @@ class _CategoryManager extends ConsumerWidget {
                         const Icon(
                           Icons.auto_awesome,
                           size: 16,
-                          color: AppThemes.pokedexLightBlue,
+                          color: AppThemes.retroLightBlue,
                         ),
                         const SizedBox(width: 8),
                         Expanded(
@@ -1026,7 +1026,7 @@ class _CategoryManager extends ConsumerWidget {
                     Text(
                       errorText!,
                       style: const TextStyle(
-                        color: AppThemes.pokedexRed,
+                        color: AppThemes.retroRed,
                         fontSize: 12,
                       ),
                     ),
@@ -1089,7 +1089,7 @@ class _CategoryManager extends ConsumerWidget {
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppThemes.pokedexRed,
+              backgroundColor: AppThemes.retroRed,
             ),
             onPressed: () {
               ref.read(categoryProvider.notifier).removeCategory(index);
@@ -1134,9 +1134,9 @@ class _CategoryManager extends ConsumerWidget {
 }
 
 class _ExportButton extends ConsumerStatefulWidget {
-  final bool isPokedex;
+  final bool isRetro;
 
-  const _ExportButton({required this.isPokedex});
+  const _ExportButton({required this.isRetro});
 
   @override
   ConsumerState<_ExportButton> createState() => _ExportButtonState();
@@ -1165,14 +1165,14 @@ class _ExportButtonState extends ConsumerState<_ExportButton> {
 
   @override
   Widget build(BuildContext context) {
-    final isPokedex = widget.isPokedex;
+    final isRetro = widget.isRetro;
     return Container(
       decoration: BoxDecoration(
         color: Theme.of(context).cardTheme.color,
         borderRadius: BorderRadius.circular(12),
-        border: isPokedex
+        border: isRetro
             ? Border.all(
-                color: AppThemes.pokedexBlue.withValues(alpha: 0.3),
+                color: AppThemes.retroBlue.withValues(alpha: 0.3),
                 width: 1,
               )
             : null,
@@ -1180,13 +1180,13 @@ class _ExportButtonState extends ConsumerState<_ExportButton> {
       child: ListTile(
         leading: Icon(
           Icons.download,
-          color: isPokedex ? AppThemes.pokedexLightBlue : Colors.blueAccent,
+          color: isRetro ? AppThemes.retroLightBlue : Colors.blueAccent,
         ),
         title: Text(
-          isPokedex ? 'EXPORT BACKUP' : 'Export Backup',
+          isRetro ? 'EXPORT BACKUP' : 'Export Backup',
           style: TextStyle(
             fontWeight: FontWeight.w600,
-            letterSpacing: isPokedex ? 0.5 : 0,
+            letterSpacing: isRetro ? 0.5 : 0,
             fontSize: 14,
           ),
         ),
@@ -1195,7 +1195,7 @@ class _ExportButtonState extends ConsumerState<_ExportButton> {
           style: TextStyle(
             color: Colors.white60,
             fontSize: 12,
-            letterSpacing: isPokedex ? 0.3 : 0,
+            letterSpacing: isRetro ? 0.3 : 0,
           ),
         ),
         trailing: _exporting
@@ -1206,7 +1206,7 @@ class _ExportButtonState extends ConsumerState<_ExportButton> {
               )
             : Icon(
                 Icons.share,
-                color: isPokedex ? AppThemes.pokedexBlue : Colors.blueAccent,
+                color: isRetro ? AppThemes.retroBlue : Colors.blueAccent,
               ),
         onTap: _exporting ? null : _export,
       ),

@@ -57,7 +57,7 @@ class StorageService {
     final jsonString = const JsonEncoder.withIndent('  ').convert(data);
     final dir = await getApplicationDocumentsDirectory();
     final timestamp = DateTime.now().toIso8601String().replaceAll(':', '-').split('.').first;
-    final file = File('${dir.path}/planedex_backup_$timestamp.json');
+    final file = File('${dir.path}/dexicon_backup_$timestamp.json');
     await file.writeAsString(jsonString);
     return file;
   }

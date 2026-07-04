@@ -36,28 +36,28 @@ void main() async {
   runApp(
     ProviderScope(
       overrides: [storageServiceProvider.overrideWithValue(storageService)],
-      child: const PlaneTrackerApp(),
+      child: const DexiconApp(),
     ),
   );
 }
 
-class PlaneTrackerApp extends ConsumerWidget {
-  const PlaneTrackerApp({super.key});
+class DexiconApp extends ConsumerWidget {
+  const DexiconApp({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(themeProvider);
 
     // Select theme based on current mode and font
-    final theme = settings.isPokedex
-        ? AppThemes.pokedexTheme(font: settings.font)
+    final theme = settings.isRetro
+        ? AppThemes.retroTheme(font: settings.font)
         : AppThemes.classicTheme;
 
     return MaterialApp(
-      title: 'Plane Tracker',
+      title: 'Dexicon',
       theme: theme,
-      // Show boot screen if Pokedex mode and boot animation enabled
-      home: settings.isPokedex && settings.bootAnimation
+      // Show boot screen if Retro mode and boot animation enabled
+      home: settings.isRetro && settings.bootAnimation
           ? const BootScreen()
           : const HomeScreen(),
       routes: {

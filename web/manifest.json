@@ -1,6 +1,6 @@
 {
-    "name": "plane_tracker",
-    "short_name": "plane_tracker",
+    "name": "Dexicon",
+    "short_name": "Dexicon",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#000000",

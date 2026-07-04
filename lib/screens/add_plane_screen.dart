@@ -112,12 +112,12 @@ class _AddPlaneScreenState extends ConsumerState<AddPlaneScreen>
   Future<void> _analyzeImage() async {
     if (_image == null) return;
 
-    final isPokedex = ref.read(themeProvider).isPokedex;
+    final isRetro = ref.read(themeProvider).isRetro;
     final category = ref.read(categoryProvider).activeCategory;
 
     setState(() {
       _isAnalyzing = true;
-      _statusMessage = isPokedex
+      _statusMessage = isRetro
           ? 'ACQUIRING LOCATION...'
           : 'Getting location...';
     });
@@ -139,7 +139,7 @@ class _AddPlaneScreenState extends ConsumerState<AddPlaneScreen>
       }
 
       setState(() {
-        _statusMessage = isPokedex
+        _statusMessage = isRetro
             ? 'ANALYZING VISUAL DATA...'
             : 'Analyzing with Gemini...';
       });
@@ -157,7 +157,7 @@ class _AddPlaneScreenState extends ConsumerState<AddPlaneScreen>
       );
 
       setState(() {
-        _statusMessage = isPokedex ? 'STORING ENTRY...' : 'Saving...';
+        _statusMessage = isRetro ? 'STORING ENTRY...' : 'Saving...';
       });
 
       final storageService = ref.read(storageServiceProvider);
@@ -177,7 +177,7 @@ class _AddPlaneScreenState extends ConsumerState<AddPlaneScreen>
     } catch (e) {
       _scanAnimationController.stop();
       setState(() {
-        _statusMessage = isPokedex ? 'ERROR: $e' : 'Error: $e';
+        _statusMessage = isRetro ? 'ERROR: $e' : 'Error: $e';
         _isAnalyzing = false;
       });
     }
@@ -185,17 +185,17 @@ class _AddPlaneScreenState extends ConsumerState<AddPlaneScreen>
 
   @override
   Widget build(BuildContext context) {
-    final isPokedex = ref.watch(themeProvider).isPokedex;
+    final isRetro = ref.watch(themeProvider).isRetro;
     final settings = ref.watch(themeProvider);
     final category = ref.watch(categoryProvider).activeCategory;
 
     Widget body = Center(
       child: _isAnalyzing
-          ? _buildAnalyzingState(isPokedex)
-          : _buildCaptureState(isPokedex, category),
+          ? _buildAnalyzingState(isRetro)
+          : _buildCaptureState(isRetro, category),
     );
 
-    if (isPokedex) {
+    if (isRetro) {
       body = Stack(
         children: [
           body,
@@ -212,24 +212,24 @@ class _AddPlaneScreenState extends ConsumerState<AddPlaneScreen>
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          isPokedex
+          isRetro
               ? 'SCAN ${category.name.toUpperCase()}'
               : 'Add ${category.name}',
         ),
-        leading: isPokedex ? _buildPokedexBackButton(context) : null,
+        leading: isRetro ? _buildRetroBackButton(context) : null,
       ),
       body: body,
     );
   }
 
-  Widget _buildPokedexBackButton(BuildContext context) {
+  Widget _buildRetroBackButton(BuildContext context) {
     return IconButton(
       icon: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: AppThemes.pokedexDarkGray,
+          color: AppThemes.retroDarkGray,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: AppThemes.pokedexBlue.withOpacity(0.5)),
+          border: Border.all(color: AppThemes.retroBlue.withOpacity(0.5)),
         ),
         child: const Icon(Icons.arrow_back, size: 18),
       ),
@@ -237,12 +237,12 @@ class _AddPlaneScreenState extends ConsumerState<AddPlaneScreen>
     );
   }
 
-  Widget _buildAnalyzingState(bool isPokedex) {
+  Widget _buildAnalyzingState(bool isRetro) {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        if (isPokedex) ...[
-          // Pokedex scanning animation
+        if (isRetro) ...[
+          // Retro scanning animation
           Stack(
             alignment: Alignment.center,
             children: [
@@ -252,7 +252,7 @@ class _AddPlaneScreenState extends ConsumerState<AddPlaneScreen>
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: AppThemes.pokedexBlue.withOpacity(0.5),
+                    color: AppThemes.retroBlue.withOpacity(0.5),
                     width: 3,
                   ),
                 ),
@@ -266,7 +266,7 @@ class _AddPlaneScreenState extends ConsumerState<AddPlaneScreen>
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       border: Border.all(
-                        color: AppThemes.pokedexRed.withOpacity(
+                        color: AppThemes.retroRed.withOpacity(
                           _scanAnimation.value,
                         ),
                         width: 4,
@@ -281,10 +281,10 @@ class _AddPlaneScreenState extends ConsumerState<AddPlaneScreen>
                   Icon(
                     Icons.radar,
                     size: 60,
-                    color: AppThemes.pokedexLightBlue,
+                    color: AppThemes.retroLightBlue,
                   ),
                   const SizedBox(height: 8),
-                  _buildLedIndicator(AppThemes.pokedexYellow, size: 12),
+                  _buildLedIndicator(AppThemes.retroYellow, size: 12),
                 ],
               ),
             ],
@@ -294,7 +294,7 @@ class _AddPlaneScreenState extends ConsumerState<AddPlaneScreen>
             _statusMessage ?? 'PROCESSING...',
             style: TextStyle(
               fontSize: 16,
-              color: AppThemes.pokedexLightBlue,
+              color: AppThemes.retroLightBlue,
               letterSpacing: 2,
               fontWeight: FontWeight.bold,
             ),
@@ -303,8 +303,8 @@ class _AddPlaneScreenState extends ConsumerState<AddPlaneScreen>
           SizedBox(
             width: 200,
             child: LinearProgressIndicator(
-              backgroundColor: AppThemes.pokedexDarkGray,
-              valueColor: AlwaysStoppedAnimation(AppThemes.pokedexBlue),
+              backgroundColor: AppThemes.retroDarkGray,
+              valueColor: AlwaysStoppedAnimation(AppThemes.retroBlue),
             ),
           ),
         ] else ...[
@@ -316,7 +316,7 @@ class _AddPlaneScreenState extends ConsumerState<AddPlaneScreen>
     );
   }
 
-  Widget _buildCaptureState(bool isPokedex, var category) {
+  Widget _buildCaptureState(bool isRetro, var category) {
     return SingleChildScrollView(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -326,16 +326,16 @@ class _AddPlaneScreenState extends ConsumerState<AddPlaneScreen>
             Stack(
               children: [
                 ClipRRect(
-                  borderRadius: BorderRadius.circular(isPokedex ? 8 : 16),
+                  borderRadius: BorderRadius.circular(isRetro ? 8 : 16),
                   child: Image.file(_image!, height: 300, fit: BoxFit.cover),
                 ),
-                if (isPokedex) ...[
+                if (isRetro) ...[
                   Positioned.fill(
                     child: Container(
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(
-                          color: AppThemes.pokedexBlue.withOpacity(0.4),
+                          color: AppThemes.retroBlue.withOpacity(0.4),
                           width: 2,
                         ),
                       ),
@@ -344,7 +344,7 @@ class _AddPlaneScreenState extends ConsumerState<AddPlaneScreen>
                   Positioned.fill(
                     child: CustomPaint(
                       painter: DetailViewfinderBracketsPainter(
-                        color: AppThemes.pokedexBlue.withOpacity(0.6),
+                        color: AppThemes.retroBlue.withOpacity(0.6),
                       ),
                     ),
                   ),
@@ -357,20 +357,20 @@ class _AddPlaneScreenState extends ConsumerState<AddPlaneScreen>
                         vertical: 6,
                       ),
                       decoration: BoxDecoration(
-                        color: AppThemes.pokedexCard.withOpacity(0.9),
+                        color: AppThemes.retroCard.withOpacity(0.9),
                         borderRadius: BorderRadius.circular(4),
-                        border: Border.all(color: AppThemes.pokedexGreen),
+                        border: Border.all(color: AppThemes.retroGreen),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          _buildLedIndicator(AppThemes.pokedexGreen),
+                          _buildLedIndicator(AppThemes.retroGreen),
                           const SizedBox(width: 8),
                           Text(
                             'IMAGE LOADED',
                             style: TextStyle(
                               fontSize: 10,
-                              color: AppThemes.pokedexGreen,
+                              color: AppThemes.retroGreen,
                               letterSpacing: 1,
                               fontWeight: FontWeight.bold,
                             ),
@@ -390,15 +390,15 @@ class _AddPlaneScreenState extends ConsumerState<AddPlaneScreen>
               child: TextField(
                 controller: _locationController,
                 decoration: InputDecoration(
-                  labelText: isPokedex
+                  labelText: isRetro
                       ? 'LOCATION DATA'
                       : 'Location (Optional)',
-                  hintText: isPokedex
+                  hintText: isRetro
                       ? 'Airport code or coordinates'
                       : 'e.g. JFK Airport, London',
                   prefixIcon: Icon(
                     Icons.pin_drop,
-                    color: isPokedex ? AppThemes.pokedexBlue : null,
+                    color: isRetro ? AppThemes.retroBlue : null,
                   ),
                   border: const OutlineInputBorder(),
                 ),
@@ -407,26 +407,26 @@ class _AddPlaneScreenState extends ConsumerState<AddPlaneScreen>
             const SizedBox(height: 24),
 
             // Analyze button
-            _buildAnalyzeButton(isPokedex, category),
+            _buildAnalyzeButton(isRetro, category),
             const SizedBox(height: 24),
           ] else
-            _buildEmptyState(isPokedex, category),
+            _buildEmptyState(isRetro, category),
 
           if (_statusMessage != null)
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: Container(
                 padding: const EdgeInsets.all(12),
-                decoration: isPokedex
+                decoration: isRetro
                     ? BoxDecoration(
                         color: _statusMessage!.contains('Error')
-                            ? AppThemes.pokedexRed.withOpacity(0.2)
-                            : AppThemes.pokedexCard,
+                            ? AppThemes.retroRed.withOpacity(0.2)
+                            : AppThemes.retroCard,
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(
                           color: _statusMessage!.contains('Error')
-                              ? AppThemes.pokedexRed
-                              : AppThemes.pokedexBlue.withOpacity(0.5),
+                              ? AppThemes.retroRed
+                              : AppThemes.retroBlue.withOpacity(0.5),
                         ),
                       )
                     : null,
@@ -434,9 +434,9 @@ class _AddPlaneScreenState extends ConsumerState<AddPlaneScreen>
                   _statusMessage!,
                   style: TextStyle(
                     color: _statusMessage!.contains('Error')
-                        ? (isPokedex ? AppThemes.pokedexRed : Colors.red)
-                        : (isPokedex ? AppThemes.pokedexLightBlue : null),
-                    letterSpacing: isPokedex ? 0.5 : 0,
+                        ? (isRetro ? AppThemes.retroRed : Colors.red)
+                        : (isRetro ? AppThemes.retroLightBlue : null),
+                    letterSpacing: isRetro ? 0.5 : 0,
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -444,50 +444,50 @@ class _AddPlaneScreenState extends ConsumerState<AddPlaneScreen>
             ),
 
           // Capture buttons
-          _buildCaptureButtons(isPokedex),
+          _buildCaptureButtons(isRetro),
           const SizedBox(height: 32),
         ],
       ),
     );
   }
 
-  Widget _buildEmptyState(bool isPokedex, var category) {
+  Widget _buildEmptyState(bool isRetro, var category) {
     return Column(
       children: [
         Container(
           width: 150,
           height: 150,
-          decoration: isPokedex
+          decoration: isRetro
               ? BoxDecoration(
-                  color: AppThemes.pokedexCard,
+                  color: AppThemes.retroCard,
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: AppThemes.pokedexBlue.withOpacity(0.5),
+                    color: AppThemes.retroBlue.withOpacity(0.5),
                     width: 3,
                   ),
                 )
               : null,
           child: Icon(
-            isPokedex ? Icons.radar : Icons.airplanemode_active,
+            isRetro ? Icons.radar : Icons.airplanemode_active,
             size: 80,
-            color: isPokedex
-                ? AppThemes.pokedexBlue.withOpacity(0.7)
+            color: isRetro
+                ? AppThemes.retroBlue.withOpacity(0.7)
                 : Colors.grey,
           ),
         ),
         const SizedBox(height: 24),
         Text(
-          isPokedex
+          isRetro
               ? 'READY TO SCAN'
               : 'Capture a ${category.name.substring(0, category.name.length - 1)}',
           style: TextStyle(
-            fontSize: isPokedex ? 18 : 16,
-            color: isPokedex ? AppThemes.pokedexLightBlue : Colors.white70,
-            letterSpacing: isPokedex ? 3 : 0,
-            fontWeight: isPokedex ? FontWeight.bold : FontWeight.normal,
+            fontSize: isRetro ? 18 : 16,
+            color: isRetro ? AppThemes.retroLightBlue : Colors.white70,
+            letterSpacing: isRetro ? 3 : 0,
+            fontWeight: isRetro ? FontWeight.bold : FontWeight.normal,
           ),
         ),
-        if (isPokedex) ...[
+        if (isRetro) ...[
           const SizedBox(height: 8),
           Text(
             'Use camera or select from gallery',
@@ -503,49 +503,49 @@ class _AddPlaneScreenState extends ConsumerState<AddPlaneScreen>
     );
   }
 
-  Widget _buildAnalyzeButton(bool isPokedex, var category) {
+  Widget _buildAnalyzeButton(bool isRetro, var category) {
     return ElevatedButton.icon(
       onPressed: _analyzeImage,
       style: ElevatedButton.styleFrom(
-        backgroundColor: isPokedex ? AppThemes.pokedexRed : null,
+        backgroundColor: isRetro ? AppThemes.retroRed : null,
         foregroundColor: Colors.white,
         padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(isPokedex ? 8 : 25),
-          side: isPokedex
+          borderRadius: BorderRadius.circular(isRetro ? 8 : 25),
+          side: isRetro
               ? const BorderSide(color: Colors.white24, width: 2)
               : BorderSide.none,
         ),
       ),
-      icon: Icon(isPokedex ? Icons.radar : Icons.auto_awesome),
+      icon: Icon(isRetro ? Icons.radar : Icons.auto_awesome),
       label: Text(
-        isPokedex
+        isRetro
             ? 'BEGIN SCAN'
             : 'Identify ${category.name.substring(0, category.name.length - 1)}',
         style: TextStyle(
-          letterSpacing: isPokedex ? 2 : 0,
+          letterSpacing: isRetro ? 2 : 0,
           fontWeight: FontWeight.bold,
         ),
       ),
     );
   }
 
-  Widget _buildCaptureButtons(bool isPokedex) {
+  Widget _buildCaptureButtons(bool isRetro) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         _buildCaptureButton(
-          isPokedex: isPokedex,
+          isRetro: isRetro,
           icon: Icons.camera_alt,
-          label: isPokedex ? 'CAMERA' : 'Camera',
+          label: isRetro ? 'CAMERA' : 'Camera',
           onTap: () => _pickImage(ImageSource.camera),
           isPrimary: true,
         ),
         const SizedBox(width: 16),
         _buildCaptureButton(
-          isPokedex: isPokedex,
+          isRetro: isRetro,
           icon: Icons.photo_library,
-          label: isPokedex ? 'GALLERY' : 'Gallery',
+          label: isRetro ? 'GALLERY' : 'Gallery',
           onTap: () => _pickImage(ImageSource.gallery),
           isPrimary: false,
         ),
@@ -554,30 +554,30 @@ class _AddPlaneScreenState extends ConsumerState<AddPlaneScreen>
   }
 
   Widget _buildCaptureButton({
-    required bool isPokedex,
+    required bool isRetro,
     required IconData icon,
     required String label,
     required VoidCallback onTap,
     required bool isPrimary,
   }) {
-    if (isPokedex) {
+    if (isRetro) {
       return GestureDetector(
         onTap: onTap,
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
           decoration: BoxDecoration(
-            color: isPrimary ? AppThemes.pokedexDarkRed : AppThemes.pokedexCard,
+            color: isPrimary ? AppThemes.retroDarkRed : AppThemes.retroCard,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: isPrimary
-                  ? AppThemes.pokedexRed
-                  : AppThemes.pokedexBlue.withOpacity(0.5),
+                  ? AppThemes.retroRed
+                  : AppThemes.retroBlue.withOpacity(0.5),
               width: 2,
             ),
             boxShadow: isPrimary
                 ? [
                     BoxShadow(
-                      color: AppThemes.pokedexRed.withOpacity(0.4),
+                      color: AppThemes.retroRed.withOpacity(0.4),
                       blurRadius: 12,
                       spreadRadius: 2,
                     ),
@@ -588,14 +588,14 @@ class _AddPlaneScreenState extends ConsumerState<AddPlaneScreen>
             children: [
               Icon(
                 icon,
-                color: isPrimary ? Colors.white : AppThemes.pokedexLightBlue,
+                color: isPrimary ? Colors.white : AppThemes.retroLightBlue,
                 size: 28,
               ),
               const SizedBox(height: 8),
               Text(
                 label,
                 style: TextStyle(
-                  color: isPrimary ? Colors.white : AppThemes.pokedexLightBlue,
+                  color: isPrimary ? Colors.white : AppThemes.retroLightBlue,
                   fontSize: 12,
                   letterSpacing: 1,
                   fontWeight: FontWeight.bold,
